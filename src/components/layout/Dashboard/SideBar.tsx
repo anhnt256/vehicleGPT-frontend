@@ -1,28 +1,21 @@
-"use client";
+import { useLocalStorage } from 'usehooks-ts';
+import { useOrganization, useOrganizationList } from '@clerk/clerk-react';
+import { PlusCircle } from 'lucide-react';
 
-import { Plus } from "lucide-react";
-import { useLocalStorage } from "usehooks-ts";
-import { useOrganization, useOrganizationList } from "@clerk/clerk-react";
+import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion } from '@/components/ui/accordion';
 
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Accordion } from "@/components/ui/accordion";
-
-import { NavItem, Organization } from "./NavItem";
+import { NavItem, Organization } from './NavItem';
 
 interface SidebarProps {
   storageKey?: string;
 }
 
-export const Sidebar = ({ storageKey = "t-sidebar-state" }: SidebarProps) => {
+export const Sidebar = ({ storageKey = 't-sidebar-state' }: SidebarProps) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [expanded, setExpanded] = useLocalStorage<Record<string, any>>(
-    storageKey,
-    {},
-  );
+  const [expanded, setExpanded] = useLocalStorage<Record<string, any>>(storageKey, {});
 
-  const { organization: activeOrganization, isLoaded: isLoadedOrg } =
-    useOrganization();
+  const { organization: activeOrganization, isLoaded: isLoadedOrg } = useOrganization();
   const { userMemberships, isLoaded: isLoadedOrgList } = useOrganizationList({
     userMemberships: {
       infinite: true,
@@ -37,7 +30,7 @@ export const Sidebar = ({ storageKey = "t-sidebar-state" }: SidebarProps) => {
 
       return acc;
     },
-    [],
+    []
   );
 
   const onExpand = (id: string) => {
@@ -64,26 +57,8 @@ export const Sidebar = ({ storageKey = "t-sidebar-state" }: SidebarProps) => {
   }
 
   return (
-    <div className="bg-[#001f5e7d]">
-      <div className="font-medium text-xs flex items-center mb-1">
-        <span className="pl-4">Workspaces</span>
-        <Button
-          asChild
-          type="button"
-          size="icon"
-          variant="ghost"
-          className="ml-auto"
-        >
-          <a href="/select-org">
-            <Plus className="h-4 w-4" />
-          </a>
-        </Button>
-      </div>
-      <Accordion
-        type="multiple"
-        defaultValue={defaultAccordionValue}
-        className="space-y-2"
-      >
+    <div className="bg-gray-900/95 border-r border-gray-800/50 h-full">
+      <Accordion type="multiple" defaultValue={defaultAccordionValue} className="space-y-2">
         {userMemberships.data.map(({ organization }) => (
           <NavItem
             key={organization.id}
@@ -94,6 +69,37 @@ export const Sidebar = ({ storageKey = "t-sidebar-state" }: SidebarProps) => {
           />
         ))}
       </Accordion>
+      <div className="mt-4 px-3">
+        <h2 className="mb-2 px-2 text-sm font-semibold text-gray-300">WORKSPACES</h2>
+        
+        <div className="space-y-1">
+          <button
+            className="flex items-center gap-2 w-full p-2 rounded-md bg-indigo-600/20 text-indigo-300 font-medium transition-colors hover:bg-indigo-600/30"
+          >
+            <div className="flex-shrink-0 w-4 h-4 rounded-sm bg-indigo-500"></div>
+            <span className="truncate">Personal Tasks</span>
+          </button>
+          
+          <button
+            className="flex items-center gap-2 w-full p-2 rounded-md text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-300"
+          >
+            <div className="flex-shrink-0 w-4 h-4 rounded-sm bg-gray-600"></div>
+            <span className="truncate">Team Projects</span>
+          </button>
+          
+          <button
+            className="flex items-center gap-2 w-full p-2 rounded-md text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-300"
+          >
+            <div className="flex-shrink-0 w-4 h-4 rounded-sm bg-gray-600"></div>
+            <span className="truncate">Client Work</span>
+          </button>
+        </div>
+        
+        <button className="flex items-center gap-2 mt-2 px-2 py-1 text-sm text-gray-400 hover:text-gray-300">
+          <PlusCircle size={16} />
+          <span>Add Workspace</span>
+        </button>
+      </div>
     </div>
   );
 };

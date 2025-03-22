@@ -1,18 +1,23 @@
-import { Navbar } from './navbar';
-import { Sidebar } from './sidebar';
+import { Navbar } from './NavBar';
+import { Sidebar } from './SideBar';
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="h-full">
+    <div className="min-h-screen bg-gray-900">
+      {/* Navbar - always visible */}
       <Navbar />
-      <main className="pt-20 md:pt-24 px-4 max-w-6xl 2xl:max-w-screen-xl mx-auto">
-        <div className="flex gap-x-7">
-          <div className="w-64 shrink-0 hidden md:block">
-            <Sidebar />
-          </div>
+      
+      <div className="flex pt-16"> {/* Add padding-top to account for fixed navbar */}
+        {/* Sidebar - hidden on mobile */}
+        <div className="w-64 shrink-0 hidden lg:block">
+          <Sidebar />
+        </div>
+        
+        {/* Main content - full width on mobile */}
+        <div className="flex-1 w-full min-w-0">
           {children}
         </div>
-      </main>
+      </div>
     </div>
   );
 };

@@ -23,5 +23,13 @@ export const router = createBrowserRouter([
         </DashboardLayout>
       </PrivateRoute>
     ),
+    loader: ({ request }) => {
+      const url = new URL(request.url);
+      let userRole = url.searchParams.get('userRole');
+      if (!userRole) {
+        userRole = 'free'; // Set default userRole
+      }
+      return { userRole };
+    },
   },
 ]);

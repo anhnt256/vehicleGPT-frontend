@@ -1,7 +1,4 @@
-"use client";
-
 import { Activity, Layout, Settings } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 import {
   AccordionContent,
@@ -10,6 +7,7 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export type Organization = {
   id: string;
@@ -31,8 +29,8 @@ export const NavItem = ({
   organization,
   onExpand,
 }: NavItemProps) => {
-  const router = useRouter();
-  const pathname = usePathname();
+  const navigate = useNavigate(); // Use useNavigate for navigation
+  const location = useLocation(); // Use useLocation to get the current pathname
 
   const routes = [
     {
@@ -53,7 +51,7 @@ export const NavItem = ({
   ];
 
   const onClick = (href: string) => {
-    router.push(href);
+    navigate(href);
   };
 
   return (
@@ -84,7 +82,7 @@ export const NavItem = ({
             onClick={() => onClick(route.href)}
             className={cn(
               "w-full font-normal justify-start pl-10 mb-1",
-              pathname === route.href && "bg-sky-500/10 text-sky-700",
+              location.pathname === route.href && "bg-sky-500/10 text-sky-700",
             )}
             variant="ghost"
           >

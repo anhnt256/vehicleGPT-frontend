@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+LOCAL_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+VALID_BRANCH_REGEX="^(master|main|dev|staging){1}$|^(feat|fix|hotfix|release|refactor)\/[a-zA-Z0-9._-]+$"
+
+if [[ ! $LOCAL_BRANCH =~ $VALID_BRANCH_REGEX ]]; then
+  echo "Branch name '$LOCAL_BRANCH' is invalid."
+  echo "Branch names must follow the pattern: master, main, dev, staging, or feat/*, fix/*, hotfix/*, release/*, refactor/*"
+  exit 1
+fi

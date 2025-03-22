@@ -19,6 +19,10 @@ interface TaskItemProps {
   handleUpdateTask: (taskId: string, updatedData: Partial<Task>) => void;
   handleDeleteTask: (taskId: string) => void;
   handleToggleCompleted: (taskId: string) => void;
+  activeOptionsTaskId: string | null;
+  setActiveOptionsTaskId: (id: string | null) => void;
+  activeOptionsColumnId: string | null;
+  setActiveOptionsColumnId: (id: string | null) => void;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({
@@ -28,22 +32,27 @@ const TaskItem: React.FC<TaskItemProps> = ({
   setEditingTaskId,
   handleUpdateTask,
   handleDeleteTask,
-  handleToggleCompleted
+  handleToggleCompleted,
+  activeOptionsTaskId,
+  setActiveOptionsTaskId,
+  activeOptionsColumnId,
+  setActiveOptionsColumnId
 }) => {
   const [showNotes, setShowNotes] = useState(false);
-  const [showOptions, setShowOptions] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // State for editing
   const [editTitle, setEditTitle] = useState(task.title);
   const [editNotes, setEditNotes] = useState(task.notes || '');
+  const [editStatus, setEditStatus] = useState<Status>(task.status);
   
   // Reset edit form when task changes or dialog opens
   useEffect(() => {
     if (showEditDialog || editingTaskId === task.id) {
       setEditTitle(task.title);
       setEditNotes(task.notes || '');
+      setEditStatus(task.status);
     }
   }, [task, showEditDialog, editingTaskId]);
   
@@ -65,9 +74,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0 : 1,
     zIndex: isDragging ? 999 : 'auto',
-    boxShadow: isDragging ? '0 0 10px rgba(0,0,0,0.4)' : 'none'
   };
 
   const toggleNotes = () => {
@@ -80,6 +88,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
     
     const updatedData: Partial<Task> = {
       title: editTitle.trim(),
+      status: editStatus,
       notes: isPaidUser ? (editNotes.trim() || undefined) : undefined
     };
     
@@ -95,17 +104,16 @@ const TaskItem: React.FC<TaskItemProps> = ({
     setShowDeleteDialog(false);
   };
   
-  // Khi người dùng bấm vào Edit Task
+  // Kiểm tra xem task hiện tại có đang hiển thị options không
+  const showOptions = activeOptionsTaskId === task.id;
+  
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowOptions(false);
     setShowEditDialog(true);
   };
   
-  // Khi người dùng bấm vào Delete Task
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowOptions(false);
     setShowDeleteDialog(true);
   };
   
@@ -159,19 +167,27 @@ const TaskItem: React.FC<TaskItemProps> = ({
               <span className="text-xs text-gray-500">
                 {task.createdAt.toLocaleDateString()}
               </span>
-              <div className="relative">
+              <div className="relative z-10">
                 <button
-                  className="text-gray-400 hover:text-white p-0.5"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowOptions(!showOptions);
+                    // Thay đổi logic hiển thị options
+                    if (showOptions) {
+                      setActiveOptionsTaskId(null);
+                    } else {
+                      // Đóng menu của column nếu đang mở
+                      setActiveOptionsColumnId(null);
+                      // Mở menu của task
+                      setActiveOptionsTaskId(task.id);
+                    }
                   }}
+                  className="p-1 text-gray-400 hover:text-white"
                 >
                   <MoreHorizontal size={16} />
                 </button>
                 
                 {showOptions && (
-                  <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 z-10 min-w-32">
+                  <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 z-[1000] min-w-40 border border-gray-700">
                     <button 
                       className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700"
                       onClick={handleEditClick}
@@ -225,6 +241,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             // Reset form when dialog closes
             setEditTitle(task.title);
             setEditNotes(task.notes || '');
+            setEditStatus(task.status);
           }
         }}
       >
@@ -245,6 +262,21 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
                 autoFocus
               />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300">
+                Status
+              </label>
+              <select
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value as Status)}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+              >
+                <option value="TO DO">TO DO</option>
+                <option value="IN PROGRESS">IN PROGRESS</option>
+                <option value="DONE">DONE</option>
+              </select>
             </div>
             
             {isPaidUser && (

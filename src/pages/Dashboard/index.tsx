@@ -12,7 +12,8 @@ import {
   PointerSensor,
   TouchSensor,
   useSensor,
-  useSensors 
+  useSensors,
+  DragOverlay
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import KanbanAddColumn from './components/KanbanAddColumn';
@@ -68,6 +69,9 @@ function Dashboard() {
   const [layoutType, setLayoutType] = useState<LayoutType>('list');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [activeOptionsTaskId, setActiveOptionsTaskId] = useState<string | null>(null);
+  const [activeOptionsColumnId, setActiveOptionsColumnId] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   // Configure sensors for both mouse/touch
   const sensors = useSensors(
@@ -96,8 +100,20 @@ function Dashboard() {
     const { active } = event;
     const activeData = active.data.current;
     
+    // Đóng tất cả các menu options khi bắt đầu kéo
+    setActiveOptionsTaskId(null);
+    setActiveOptionsColumnId(null);
+    
     if (activeData?.type === 'task') {
       setDraggingTaskId(active.id as string);
+      const taskId = active.id as string;
+      const taskColumn = columns.find(col => 
+        col.tasks.some(task => task.id === taskId)
+      );
+      if (taskColumn) {
+        const task = taskColumn.tasks.find(t => t.id === taskId);
+        if (task) setActiveTask(task);
+      }
     } else if (activeData?.type === 'column') {
       setDraggingColumnId(active.id as string);
     }
@@ -224,62 +240,172 @@ function Dashboard() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over) {
-      // Nếu không thả vào đâu cả, reset state
-      setDraggingTaskId(null);
-      setDraggingColumnId(null);
-      return;
-    }
-    
+    // Lấy dữ liệu từ đối tượng đang kéo
     const activeId = active.id as string;
-    const overId = over.id as string;
     const activeData = active.data.current;
+    
+    // Reset states
+    setDraggingTaskId(null);
+    setDraggingColumnId(null);
+    setActiveTask(null);
+    
+    // Nếu không có vùng thả, chỉ reset states - không cần làm gì thêm
+    // Task/Column sẽ trở về vị trí ban đầu do không có thay đổi nào đối với state columns
+    if (!over) return;
+    
+    const overId = over.id as string;
+    
+    // Nếu kéo và thả cùng một item, không làm gì cả
+    if (activeId === overId) return;
+    
     const overData = over.data.current;
     
-    // Nếu kéo thả vào cùng một chỗ, không làm gì cả
-    if (activeId === overId) {
-      setDraggingTaskId(null);
-      setDraggingColumnId(null);
-      return;
+    // Kiểm tra xem overData có tồn tại và có type hợp lệ không
+    if (!overData || !['task', 'column'].includes(overData.type)) {
+      console.log('Dropped on invalid target');
+      return; // Trở về vị trí ban đầu
     }
     
-    // Xử lý kéo thả columns
-    if (activeData?.type === 'column' && overData?.type === 'column') {
+    // Kiểm tra xem đang kéo thả Task hay Column
+    if (activeData?.type === 'column' && overData.type === 'column') {
+      // Xử lý kéo thả columns
       setColumns(prev => {
         const oldIndex = prev.findIndex(col => col.id === activeId);
         const newIndex = prev.findIndex(col => col.id === overId);
         return arrayMove(prev, oldIndex, newIndex);
       });
+    } else if (activeData?.type === 'task') {
+      // Chỉ xử lý kéo thả tasks nếu target là task hoặc column
+      if (overData.type === 'task' || overData.type === 'column') {
+        // Find source and target columns
+        const activeColumn = columns.find(col => 
+          col.tasks.some(task => task.id === activeId)
+        );
+        
+        // Case: Dropping on Task
+        if (overData.type === 'task') {
+          const overTask = overData.task;
+          const overColumn = columns.find(col => 
+            col.tasks.some(task => task.id === overId)
+          );
+          
+          if (!activeColumn || !overColumn) return;
+          
+          setColumns(prev => {
+            // Get the active task
+            const activeTask = activeColumn.tasks.find(task => task.id === activeId);
+            if (!activeTask) return prev;
+            
+            return prev.map(col => {
+              // Handle reordering within the same column
+              if (col.id === activeColumn.id && col.id === overColumn.id) {
+                const oldIndex = col.tasks.findIndex(task => task.id === activeId);
+                const newIndex = col.tasks.findIndex(task => task.id === overId);
+                
+                const newTasks = [...col.tasks];
+                newTasks.splice(oldIndex, 1);
+                newTasks.splice(newIndex, 0, activeTask);
+                
+                return {
+                  ...col,
+                  tasks: newTasks
+                };
+              }
+              
+              // Remove from source column
+              if (col.id === activeColumn.id) {
+                return {
+                  ...col,
+                  tasks: col.tasks.filter(task => task.id !== activeId)
+                };
+              }
+              
+              // Add to target column
+              if (col.id === overColumn.id) {
+                const overTaskIndex = col.tasks.findIndex(task => task.id === overId);
+                const newTasks = [...col.tasks];
+                
+                // Insert at the right position
+                newTasks.splice(overTaskIndex, 0, {...activeTask, status: col.title});
+                
+                return {
+                  ...col,
+                  tasks: newTasks
+                };
+              }
+              
+              return col;
+            });
+          });
+        }
+        
+        // Case: Dropping on Column
+        else if (overData.type === 'column') {
+          const overColumn = columns.find(col => col.id === overId);
+          if (!activeColumn || !overColumn) return;
+          
+          setColumns(prev => {
+            const activeTask = activeColumn.tasks.find(task => task.id === activeId);
+            if (!activeTask) return prev;
+            
+            return prev.map(col => {
+              // Remove from source column
+              if (col.id === activeColumn.id) {
+                return {
+                  ...col,
+                  tasks: col.tasks.filter(task => task.id !== activeId)
+                };
+              }
+              
+              // Add to target column
+              if (col.id === overColumn.id) {
+                return {
+                  ...col,
+                  tasks: [...col.tasks, {...activeTask, status: col.title}]
+                };
+              }
+              
+              return col;
+            });
+          });
+        }
+      } else {
+        console.log('Dropped task on invalid target type');
+        // Không làm gì, để task trở về vị trí ban đầu
+      }
     }
-    
-    // Reset các state
-    setDraggingTaskId(null);
-    setDraggingColumnId(null);
   };
 
   // Add new task
-  const handleAddTask = (columnId: string, title: string) => {
-    if (title.trim() === '') return;
-
+  const handleAddTask = (columnId: string, title: string, status?: Status, notes?: string) => {
+    // Nếu không cung cấp status, sử dụng status của column
+    const targetColumn = columns.find(col => col.id === columnId);
+    if (!targetColumn) return;
+    
+    const actualStatus = status || targetColumn.title as Status;
+    
+    // Tạo task mới
     const newTask: Task = {
       id: `task-${Date.now()}`,
-      title: title,
+      title,
+      status: actualStatus,
       completed: false,
       createdAt: new Date(),
-      status: columns.find((col) => col.id === columnId)?.title as Status,
+      notes
     };
-
-    const newColumns = columns.map((col) => {
-      if (col.id === columnId) {
-        return {
-          ...col,
-          tasks: [...col.tasks, newTask],
-        };
-      }
-      return col;
-    });
-
-    setColumns(newColumns);
+    
+    // Tìm column đích dựa trên status
+    const targetColumnId = columns.find(col => col.title === actualStatus)?.id || columnId;
+    
+    // Thêm task vào column dựa trên status
+    setColumns(prev => 
+      prev.map(column => 
+        column.id === targetColumnId
+          ? { ...column, tasks: [...column.tasks, newTask] } 
+          : column
+      )
+    );
+    
     setAddingTaskToColumnId(null);
   };
 
@@ -299,16 +425,57 @@ function Dashboard() {
 
   // Hàm xử lý cập nhật task
   const handleUpdateTask = (taskId: string, updatedData: Partial<Task>) => {
-    setColumns(prev => 
-      prev.map(column => ({
+    setColumns(prev => {
+      // Tìm column chứa task cần cập nhật
+      const columnWithTask = prev.find(column => 
+        column.tasks.some(task => task.id === taskId)
+      );
+      
+      if (!columnWithTask) return prev;
+      
+      // Tạo bản sao của task cần cập nhật
+      const taskToUpdate = {...columnWithTask.tasks.find(task => task.id === taskId)!};
+      
+      // Cập nhật dữ liệu task
+      const updatedTask = { ...taskToUpdate, ...updatedData };
+      
+      // Nếu status thay đổi, di chuyển task giữa các column
+      if (updatedData.status && updatedData.status !== taskToUpdate.status) {
+        // Tìm column đích dựa trên status mới
+        const targetColumn = prev.find(col => col.title === updatedData.status);
+        
+        if (!targetColumn) return prev;
+        
+        return prev.map(column => {
+          // Xóa task khỏi column cũ
+          if (column.id === columnWithTask.id) {
+            return {
+              ...column,
+              tasks: column.tasks.filter(task => task.id !== taskId)
+            };
+          }
+          // Thêm task vào column mới
+          if (column.id === targetColumn.id) {
+            return {
+              ...column,
+              tasks: [...column.tasks, updatedTask]
+            };
+          }
+          return column;
+        });
+      }
+      
+      // Nếu status không thay đổi, chỉ cập nhật task
+      return prev.map(column => ({
         ...column,
         tasks: column.tasks.map(task => 
           task.id === taskId 
             ? { ...task, ...updatedData } 
             : task
         )
-      }))
-    );
+      }));
+    });
+    
     setEditingTaskId(null);
   };
 
@@ -419,6 +586,11 @@ function Dashboard() {
                     handleUpdateTask={handleUpdateTask}
                     handleDeleteTask={handleDeleteTask}
                     handleToggleCompleted={handleToggleCompleted}
+                    activeOptionsTaskId={activeOptionsTaskId}
+                    setActiveOptionsTaskId={setActiveOptionsTaskId}
+                    activeOptionsColumnId={activeOptionsColumnId}
+                    setActiveOptionsColumnId={setActiveOptionsColumnId}
+                    draggingTaskId={draggingTaskId}
                   />
                 ))}
               </SortableContext>
@@ -446,6 +618,11 @@ function Dashboard() {
                     handleToggleCompleted={handleToggleCompleted}
                     handleUpdateColumn={handleUpdateColumn}
                     handleDeleteColumn={handleDeleteColumn}
+                    activeOptionsTaskId={activeOptionsTaskId}
+                    setActiveOptionsTaskId={setActiveOptionsTaskId}
+                    activeOptionsColumnId={activeOptionsColumnId}
+                    setActiveOptionsColumnId={setActiveOptionsColumnId}
+                    draggingTaskId={draggingTaskId}
                   />
                 ))}
               </SortableContext>
@@ -453,6 +630,10 @@ function Dashboard() {
               <button
                 onClick={() => setShowAddStatus(true)}
                 className="w-full mt-4 flex items-center justify-center gap-2 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-white"
+                style={{ 
+                  pointerEvents: draggingTaskId ? 'none' : 'auto',
+                  opacity: draggingTaskId ? 0.5 : 1 
+                }}
               >
                 <PlusCircle size={20} />
                 <span className="font-medium">Add Status</span>
@@ -468,6 +649,46 @@ function Dashboard() {
               )}
             </div>
           )}
+          
+          {/* Thêm DragOverlay để hiển thị task đang kéo */}
+          <DragOverlay>
+            {activeTask && (
+              <div 
+                className="bg-gray-800 border border-gray-700 rounded-md p-3 shadow-xl opacity-95 min-w-[250px] max-w-[350px]"
+                style={{ transform: 'rotate(2deg)' }}
+              >
+                <div className="flex items-center gap-2">
+                  {activeTask.completed ? (
+                    <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-gray-400"></div>
+                  )}
+                  <span className="text-white font-medium">{activeTask.title}</span>
+                </div>
+                {activeTask.notes && (
+                  <div className="mt-2 text-sm text-gray-300 line-clamp-2">{activeTask.notes}</div>
+                )}
+              </div>
+            )}
+            
+            {draggingColumnId && !activeTask && (
+              <div 
+                className="flex-shrink-0 w-[320px] flex flex-col bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl opacity-95"
+                style={{ transform: 'rotate(1deg)' }}
+              >
+                <div className="p-3 bg-gray-700 flex items-center">
+                  <span className="text-white font-medium ml-2">
+                    {columns.find(col => col.id === draggingColumnId)?.title}
+                  </span>
+                </div>
+                <div className="p-3 bg-gray-800 h-[100px] flex items-center justify-center">
+                  <span className="text-gray-400 text-sm">Column Content</span>
+                </div>
+              </div>
+            )}
+          </DragOverlay>
         </DndContext>
       </div>
     </div>

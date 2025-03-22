@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { PlusCircle, MoreHorizontal, Pencil, Trash, X, Check, GripVertical } from 'lucide-react';
 import TaskItem from './TaskItem';
 import AddTaskForm from './AddTaskForm';
-import { StatusColumn, Task } from '@/types';
+import { StatusColumn, Task, Status } from '@/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -20,7 +20,7 @@ interface KanbanColumnProps {
   isPaidUser: boolean;
   addingTaskToColumnId: string | null;
   setAddingTaskToColumnId: (id: string | null) => void;
-  handleAddTask: (columnId: string, title: string) => void;
+  handleAddTask: (columnId: string, title: string, status?: Status, notes?: string) => void;
   handleUpdateColumn: (columnId: string, title: string) => void;
   handleDeleteColumn: (columnId: string) => void;
   editingColumnId: string | null;
@@ -30,6 +30,11 @@ interface KanbanColumnProps {
   handleUpdateTask: (taskId: string, updatedData: Partial<Task>) => void;
   handleDeleteTask: (taskId: string) => void;
   handleToggleCompleted: (taskId: string) => void;
+  activeOptionsColumnId: string | null;
+  setActiveOptionsColumnId: (id: string | null) => void;
+  activeOptionsTaskId: string | null;
+  setActiveOptionsTaskId: (id: string | null) => void;
+  draggingTaskId: string | null;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -46,7 +51,12 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   setEditingTaskId,
   handleUpdateTask,
   handleDeleteTask,
-  handleToggleCompleted
+  handleToggleCompleted,
+  activeOptionsColumnId,
+  setActiveOptionsColumnId,
+  activeOptionsTaskId,
+  setActiveOptionsTaskId,
+  draggingTaskId,
 }) => {
   const {
     attributes,
@@ -64,19 +74,26 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   });
 
   const [titleInput, setTitleInput] = useState(column.title);
-  const [showOptions, setShowOptions] = useState(false);
+  const showOptions = activeOptionsColumnId === column.id;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1
+    opacity: isDragging ? 0 : 1,
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowOptions(false);
+    setActiveOptionsColumnId(null);
     setShowDeleteDialog(true);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTitleInput(column.title);
+    setEditingColumnId(column.id);
+    setActiveOptionsColumnId(null);
   };
 
   return (
@@ -132,28 +149,27 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             )}
           </div>
           
-          <div className="relative">
-            <button 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowOptions(!showOptions);
-              }}
+          <div className="ml-auto relative">
+            <button
               className="text-gray-400 hover:text-white p-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (showOptions) {
+                  setActiveOptionsColumnId(null);
+                } else {
+                  setActiveOptionsTaskId(null);
+                  setActiveOptionsColumnId(column.id);
+                }
+              }}
             >
-              <MoreHorizontal size={16} />
+              <MoreHorizontal size={20} />
             </button>
             
             {showOptions && (
-              <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 z-50 min-w-40 border border-gray-700">
+              <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 z-[1000] min-w-40 border border-gray-700">
                 <button 
                   className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setEditingColumnId(column.id);
-                    setShowOptions(false);
-                  }}
+                  onClick={handleEditClick}
                 >
                   <Pencil size={14} />
                   <span>Edit Column</span>
@@ -161,12 +177,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 <div className="border-t border-gray-700 my-1"></div>
                 <button 
                   className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-700"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowOptions(false);
-                    setShowDeleteDialog(true);
-                  }}
+                  onClick={handleDeleteClick}
                 >
                   <Trash size={14} />
                   <span>Delete Column</span>
@@ -192,18 +203,28 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                   handleUpdateTask={handleUpdateTask}
                   handleDeleteTask={handleDeleteTask}
                   handleToggleCompleted={handleToggleCompleted}
+                  activeOptionsTaskId={activeOptionsTaskId}
+                  setActiveOptionsTaskId={setActiveOptionsTaskId}
+                  activeOptionsColumnId={activeOptionsColumnId}
+                  setActiveOptionsColumnId={setActiveOptionsColumnId}
                 />
               ))}
               
               {addingTaskToColumnId === column.id ? (
                 <AddTaskForm 
-                  onAdd={(title) => handleAddTask(column.id, title)}
+                  onAdd={(title, status, notes) => handleAddTask(column.id, title, status, notes)}
                   onCancel={() => setAddingTaskToColumnId(null)}
+                  defaultStatus={column.title as Status}
+                  isPaidUser={isPaidUser}
                 />
               ) : (
                 <button
                   onClick={() => setAddingTaskToColumnId(column.id)}
                   className="w-full flex items-center justify-center gap-2 py-3 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md text-base"
+                  style={{ 
+                    pointerEvents: draggingTaskId ? 'none' : 'auto',
+                    opacity: draggingTaskId ? 0.5 : 1 
+                  }}
                 >
                   <PlusCircle size={20} className="flex-shrink-0" />
                   <span>Add Task</span>
@@ -214,7 +235,11 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </div>
       </div>
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <Dialog 
+        open={showDeleteDialog} 
+        onOpenChange={setShowDeleteDialog}
+        className="z-[1100]"
+      >
         <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-lg">
           <DialogHeader>
             <DialogTitle>Delete Column: {column.title}</DialogTitle>

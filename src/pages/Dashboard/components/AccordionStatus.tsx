@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { PlusCircle, ChevronDown, ChevronRight, MoreHorizontal, GripVertical, Pencil, Trash } from 'lucide-react';
 import TaskItem from './TaskItem';
 import AddTaskForm from './AddTaskForm';
-import { StatusColumn, Task } from '@/types';
+import { StatusColumn, Task, Status } from '@/types';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '@/components/ui/dialog';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -13,7 +13,7 @@ interface AccordionStatusProps {
   isPaidUser: boolean;
   addingTaskToColumnId: string | null;
   setAddingTaskToColumnId: (id: string | null) => void;
-  handleAddTask: (columnId: string, title: string) => void;
+  handleAddTask: (columnId: string, title: string, status?: Status, notes?: string) => void;
   handleDragStart: (e: React.DragEvent, taskId: string) => void;
   editingTaskId: string | null;
   setEditingTaskId: (id: string | null) => void;
@@ -22,6 +22,11 @@ interface AccordionStatusProps {
   handleToggleCompleted: (taskId: string) => void;
   handleUpdateColumn?: (columnId: string, title: string) => void;
   handleDeleteColumn?: (columnId: string) => void;
+  activeOptionsTaskId: string | null;
+  setActiveOptionsTaskId: (id: string | null) => void;
+  activeOptionsColumnId: string | null;
+  setActiveOptionsColumnId: (id: string | null) => void;
+  draggingTaskId: string | null;
 }
 
 const AccordionStatus: React.FC<AccordionStatusProps> = ({
@@ -37,10 +42,14 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
   handleDeleteTask,
   handleToggleCompleted,
   handleUpdateColumn,
-  handleDeleteColumn
+  handleDeleteColumn,
+  activeOptionsTaskId,
+  setActiveOptionsTaskId,
+  activeOptionsColumnId,
+  setActiveOptionsColumnId,
+  draggingTaskId
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [showOptions, setShowOptions] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [titleInput, setTitleInput] = useState(column.title);
@@ -67,16 +76,17 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
     opacity: isDragging ? 0.5 : 1
   };
   
+  // Thay vào đó, sử dụng state global
+  const showOptions = activeOptionsColumnId === column.id;
+  
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowOptions(false);
     setTitleInput(column.title);
     setShowEditDialog(true);
   };
   
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setShowOptions(false);
     setShowDeleteDialog(true);
   };
   
@@ -138,7 +148,12 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
             className="text-gray-400 hover:text-white p-1"
             onClick={(e) => {
               e.stopPropagation();
-              setShowOptions(!showOptions);
+              if (showOptions) {
+                setActiveOptionsColumnId(null);
+              } else {
+                setActiveOptionsTaskId(null);
+                setActiveOptionsColumnId(column.id);
+              }
             }}
           >
             <MoreHorizontal size={20} />
@@ -169,7 +184,7 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
       {/* Phần nội dung của accordion */}
       {isOpen && (
         <div className="p-3 sm:p-4 w-full">
-          <div className="space-y-3 overflow-y-auto w-full">
+          <div className="space-y-3 overflow-visible w-full">
             {column.tasks.map((task: Task) => (
               <TaskItem 
                 key={task.id} 
@@ -180,24 +195,31 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
                 handleUpdateTask={handleUpdateTask}
                 handleDeleteTask={handleDeleteTask}
                 handleToggleCompleted={handleToggleCompleted}
+                activeOptionsTaskId={activeOptionsTaskId}
+                setActiveOptionsTaskId={setActiveOptionsTaskId}
+                activeOptionsColumnId={activeOptionsColumnId}
+                setActiveOptionsColumnId={setActiveOptionsColumnId}
               />
             ))}
           </div>
           
           {addingTaskToColumnId === column.id ? (
             <AddTaskForm 
-              onAdd={(title) => handleAddTask(column.id, title)}
+              onAdd={(title, status, notes) => handleAddTask(column.id, title, status, notes)}
               onCancel={() => setAddingTaskToColumnId(null)}
+              defaultStatus={column.title as Status}
+              isPaidUser={isPaidUser}
             />
           ) : (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setAddingTaskToColumnId(column.id);
+              onClick={() => setAddingTaskToColumnId(column.id)}
+              className="w-full flex items-center justify-center gap-2 py-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md text-sm"
+              style={{ 
+                pointerEvents: draggingTaskId ? 'none' : 'auto',
+                opacity: draggingTaskId ? 0.5 : 1 
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 mt-3 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md text-base"
             >
-              <PlusCircle size={20} className="flex-shrink-0" />
+              <PlusCircle size={16} className="flex-shrink-0" />
               <span>Add Task</span>
             </button>
           )}

@@ -1,54 +1,146 @@
-# React + TypeScript + Vite
+# SuperTodo - Advanced Task Management Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SuperTodo is a modern task management application featuring a Kanban interface, drag-and-drop functionality, and numerous advanced features.
 
-Currently, two official plugins are available:
+## Setup Instructions
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Requirements
 
-## Expanding the ESLint configuration
+- Node.js (v18 or higher)
+- pnpm/npm/yarn
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Installation Steps
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+1. **Clone repository**
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+   ```bash
+   git clone https://github.com/yourusername/super-todo.git
+   cd super-todo
+   ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+2. **Install dependencies**
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+   ```bash
+   pnpm install
+   # Or
+   npm install
+   ```
+
+3. **Configure environment variables**
+
+   - Create a `.env` file based on `.env.example`
+   - Update the necessary keys:
+
+     ```
+     VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_key
+     CLERK_SIGN_IN_FORCE_REDIRECT_URL='/dashboard'
+     CLERK_SIGN_UP_FORCE_REDIRECT_URL='/dashboard'
+     VITE_GRAPHQL_ENDPOINT=http://localhost:4000/graphql
+     VITE_API_ENDPOINT=http://localhost:4000
+
+     # Authentication
+     JWT_SECRET=your_jwt_secret
+     JWT_EXPIRES_IN=1d
+     ```
+
+4. **Start development server**
+
+   ```bash
+   pnpm dev
+   # Or
+   npm run dev
+   ```
+
+5. **Build for production**
+   ```bash
+   pnpm build
+   # Or
+   npm run build
+   ```
+
+## Architecture Decisions
+
+### Frontend
+
+- **React + TypeScript**: Ensures type-safety and better development experience
+- **React Router**: Manages routing and protects authenticated routes
+- **Clerk**: Modern authentication solution with user and session management
+- **GraphQL**: Used for the main API, optimizing payloads and requests
+- **REST API**: Used for specific separate endpoints
+- **dnd-kit**: High-performance drag-and-drop library for the Kanban experience
+- **Context API**: Global state management for authentication
+- **Sonner**: Modern toast notifications
+- **Tailwind CSS**: Flexible and efficient styling
+
+### State Management
+
+- **Local State**: Using `useState` for component state
+- **Global State**: Context API for auth state and user role
+- **API Integration**: Custom hooks for API interaction
+
+### Authentication & Authorization
+
+- **Clerk + JWT**: Using Clerk for authentication and passing JWT tokens to the backend
+- **Cookie-based**: Storing tokens and roles in cookies instead of localStorage
+- **Role-based Access**: Distinguishing free/paid users and limiting features
+
+## Assumptions & Notes
+
+### User Interface
+
+- **Responsive Design**: Works on both mobile and desktop devices
+- **Light/Dark Mode**: Default is dark mode, suitable for productivity applications
+
+### User Roles
+
+- **Free User**: Can use the List view and basic features
+- **Paid User**: Unlocks Kanban view, Notes, and Organizations features
+
+### API Integration
+
+- Backend GraphQL runs at the address configured in `VITE_GRAPHQL_ENDPOINT`
+- Backend REST API runs at the address configured in `VITE_API_ENDPOINT`
+- JWT tokens are stored in cookies and automatically sent with each request
+
+### Task Statuses
+
+- Main statuses: TODO, IN_PROGRESS, BLOCKED, REVIEW, DONE, CANCELED
+- Tasks are automatically marked as Completed when moved to DONE status
+
+### Browser Support
+
+- Supports modern browsers: Chrome, Firefox, Safari, Edge
+- Requires JavaScript to be enabled
+
+### Future Development
+
+- Time tracking features
+- AI integration for automatic task classification and suggestions
+- Integration with third-party services: Google Calendar, Microsoft Teams, Slack
+
+### Development Notes
+
+- Using ESLint and Prettier for code quality
+- Following naming conventions and folder organization
+- Ensuring complete type checking when developing with TypeScript
+
+## Troubleshooting
+
+### Authentication Issues
+
+- Ensure CLERK_PUBLISHABLE_KEY is configured correctly
+- Check permissions and domains in your Clerk dashboard
+
+### API Issues
+
+- Verify the backend server is running
+- Confirm GraphQL and API endpoints are configured correctly
+
+### UI Issues
+
+- Clear cache and cookies if experiencing layout problems
+- Check browser console for JavaScript errors
+
+---
+
+**SuperTodo Exercise for Senior Full Stack CoverGo 2025**

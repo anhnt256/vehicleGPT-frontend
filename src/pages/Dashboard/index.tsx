@@ -530,7 +530,7 @@ function Dashboard() {
       }
 
       // Gọi API cập nhật task với dữ liệu đã được điều chỉnh
-      const updatedTodo = await updateTodo(taskId, token, updateData);
+      await updateTodo(taskId, token, updateData);
 
       // Cập nhật lại state columns với task đã được cập nhật
       setColumns((prevColumns) => {

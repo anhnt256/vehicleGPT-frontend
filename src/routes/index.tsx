@@ -2,17 +2,13 @@ import { createBrowserRouter } from 'react-router-dom';
 import { PrivateRoute } from './PrivateRoute';
 import Dashboard from '@/pages/Dashboard';
 import LandingPage from '@/pages/LandingPage';
-import LandingPageLayout from '@/components/layout/LandingPage/Layout';
 import DashboardLayout from '@/components/layout/Dashboard/Layout';
+import { getCookie } from '@/lib/utils/cookie';
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: (
-      <LandingPageLayout>
-        <LandingPage />
-      </LandingPageLayout>
-    ),
+    element: <LandingPage />,
   },
   {
     path: '/dashboard',
@@ -23,12 +19,10 @@ export const router = createBrowserRouter([
         </DashboardLayout>
       </PrivateRoute>
     ),
-    loader: ({ request }) => {
+    loader: async ({ request }) => {
+      // Lấy userRole từ URL hoặc cookie
       const url = new URL(request.url);
-      let userRole = url.searchParams.get('userRole');
-      if (!userRole) {
-        userRole = 'free'; // Set default userRole
-      }
+      const userRole = url.searchParams.get('userRole') || getCookie('userRole') || 'free';
       return { userRole };
     },
   },

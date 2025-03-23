@@ -1,14 +1,18 @@
-import { OrganizationSwitcher, UserButton } from '@clerk/clerk-react';
+import { OrganizationSwitcher, UserButton, useUser } from '@clerk/clerk-react';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Logo } from '@/components/logo';
 import { useLoaderData, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useState } from 'react';
+import { updateUserRole } from '@/lib/api/updateUserRole';
+import { getCookie, setCookie } from '@/lib/utils/cookie';
 
 export const Navbar = () => {
   const { userRole } = useLoaderData();
-  const isFreeUser = userRole === 'free';
+  const cookieRole = getCookie('userRole') || 'free';
+  const isFreeUser = userRole === 'free' || cookieRole === 'free';
   const navigate = useNavigate();
+  const { user } = useUser();
 
   const [showModel, setShowModel] = useState(false);
 
@@ -16,9 +20,23 @@ export const Navbar = () => {
     setShowModel(!showModel);
   };
 
-  const handleUpgradePaidClick = () => {
-    setShowModel(!showModel);
-    navigate('/dashboard?userRole=paid');
+  const handleUpgradePaidClick = async () => {
+    try {
+      // Gọi API và xử lý phản hồi
+      const email = user.primaryEmailAddress.emailAddress;
+      await updateUserRole(email, 'paid');
+      
+      // Lưu role mới vào cookie
+      setCookie('userRole', 'paid', 7);
+      
+      // Cập nhật UI
+      navigate('/dashboard?userRole=paid', { replace: true });
+      
+      alert('Chúc mừng! Bạn đã nâng cấp lên tài khoản Premium.');
+    } catch (error) {
+      console.error('Lỗi khi nâng cấp tài khoản:', error);
+      alert('Có lỗi xảy ra khi nâng cấp tài khoản. Vui lòng thử lại sau.');
+    }
   };
 
   return (

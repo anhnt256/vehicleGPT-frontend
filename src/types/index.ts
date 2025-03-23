@@ -1,13 +1,21 @@
-export type Status = 'TO DO' | 'IN PROGRESS' | 'DONE';
-export type LayoutType = 'kanban' | 'accordion';
+export enum TodoStatus {
+  TODO = 'Todo',
+  IN_PROGRESS = 'In Progress',
+  BLOCKED = 'Blocked',
+  REVIEW = 'Review',
+  DONE = 'Done',
+  CANCELED = 'Canceled',
+}
+
+export type Status = TodoStatus;
 
 export interface Task {
   id: string;
   title: string;
-  completed: boolean;
+  status: Status;
+  isCompleted: boolean;
   createdAt: Date;
   notes?: string;
-  status: Status;
 }
 
 export interface StatusColumn {
@@ -15,3 +23,5 @@ export interface StatusColumn {
   title: Status;
   tasks: Task[];
 }
+
+export type LayoutType = 'kanban' | 'list';

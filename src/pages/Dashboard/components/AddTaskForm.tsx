@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
 import { PlusCircle, X } from 'lucide-react';
-import { Status } from '@/types';
+import { Status, TodoStatus } from '@/types';
+import { allStatuses } from '@/utils/constants';
 
 interface AddTaskFormProps {
-  onAdd: (title: string, status?: Status, notes?: string) => void;
+  onAdd: (title: string, status?: Status, note?: string) => void;
   onCancel: () => void;
   defaultStatus?: Status;
   isPaidUser?: boolean;
+  statusOptions?: Status[];
 }
 
 const AddTaskForm: React.FC<AddTaskFormProps> = ({ 
   onAdd, 
   onCancel, 
-  defaultStatus = 'TO DO', 
-  isPaidUser = false 
+  defaultStatus = TodoStatus.TODO,
+  isPaidUser = false,
+  statusOptions = allStatuses
 }) => {
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState<Status>(defaultStatus);
-  const [notes, setNotes] = useState('');
+  const [note, setNote] = useState('');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
-      onAdd(title.trim(), status, isPaidUser ? (notes.trim() || undefined) : undefined);
+      console.log('AddTaskForm - onAdd được gọi với:', title, status, note);
+      onAdd(title.trim(), status, isPaidUser ? (note.trim() || undefined) : undefined);
       setTitle('');
-      setNotes('');
+      setNote('');
     }
   };
   
@@ -43,23 +47,28 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({
         </div>
         
         <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Status
+          </label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as Status)}
             className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white"
           >
-            <option value="TO DO">TO DO</option>
-            <option value="IN PROGRESS">IN PROGRESS</option>
-            <option value="DONE">DONE</option>
+            {statusOptions.map(option => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
           </select>
         </div>
         
         {isPaidUser && (
           <div>
             <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes (optional)"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Add note (optional)"
               className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white min-h-[80px]"
             />
           </div>

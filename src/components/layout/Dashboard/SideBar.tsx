@@ -1,20 +1,11 @@
-import { useLocalStorage } from 'usehooks-ts';
 import { useOrganization, useOrganizationList } from '@clerk/clerk-react';
-import { PlusCircle } from 'lucide-react';
+import logoImg from '@/assets/logo.png';
+import { setCookie } from '@/lib/utils/cookie';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { Accordion } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 
-import { NavItem, Organization } from './NavItem';
-
-interface SidebarProps {
-  storageKey?: string;
-}
-
-export const Sidebar = ({ storageKey = 't-sidebar-state' }: SidebarProps) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [expanded, setExpanded] = useLocalStorage<Record<string, any>>(storageKey, {});
-
+export const Sidebar = () => {
   const { organization: activeOrganization, isLoaded: isLoadedOrg } = useOrganization();
   const { userMemberships, isLoaded: isLoadedOrgList } = useOrganizationList({
     userMemberships: {
@@ -22,22 +13,12 @@ export const Sidebar = ({ storageKey = 't-sidebar-state' }: SidebarProps) => {
     },
   });
 
-  const defaultAccordionValue: string[] = Object.keys(expanded).reduce(
-    (acc: string[], key: string) => {
-      if (expanded[key]) {
-        acc.push(key);
-      }
+  const handleOrganizationClick = (orgId: string) => {
+    // Lưu orgId vào cookie với thời hạn 30 ngày
+    setCookie('selectedOrgId', orgId, 30);
 
-      return acc;
-    },
-    []
-  );
-
-  const onExpand = (id: string) => {
-    setExpanded((curr) => ({
-      ...curr,
-      [id]: !expanded[id],
-    }));
+    // Refresh trang để lấy dữ liệu mới
+    window.location.reload();
   };
 
   if (!isLoadedOrg || !isLoadedOrgList || userMemberships.isLoading) {
@@ -48,57 +29,60 @@ export const Sidebar = ({ storageKey = 't-sidebar-state' }: SidebarProps) => {
           <Skeleton className="h-10 w-10" />
         </div>
         <div className="space-y-2">
-          <NavItem.Skeleton />
-          <NavItem.Skeleton />
-          <NavItem.Skeleton />
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
         </div>
       </>
     );
   }
 
+  // Tạo organization mặc định với logo từ assets
+  const defaultOrg = {
+    id: 'default',
+    name: 'Default',
+    slug: 'default',
+    imageUrl: logoImg,
+  };
+
+  // Tạo array mới chứa defaultOrg và tất cả organization hiện có
+  const allOrganizations = [{ organization: defaultOrg }, ...userMemberships.data];
+
   return (
-    <div className="bg-gray-900/95 border-r border-gray-800/50 h-full">
-      <Accordion type="multiple" defaultValue={defaultAccordionValue} className="space-y-2">
-        {userMemberships.data.map(({ organization }) => (
-          <NavItem
+    <div className="bg-gray-900/95 border-r border-gray-800/50 h-full p-4">
+      <h2 className="text-white text-lg font-medium mb-4">Organizations</h2>
+      <div className="space-y-3">
+        {allOrganizations.map(({ organization }) => (
+          <Button
             key={organization.id}
-            isActive={activeOrganization?.id === organization.id}
-            isExpanded={expanded[organization.id]}
-            organization={organization as Organization}
-            onExpand={onExpand}
-          />
+            size="sm"
+            variant="ghost"
+            className={`w-full flex items-center justify-start gap-3 py-2 px-3 ${
+              organization.id === activeOrganization?.id ||
+              (organization.id === 'default' && !activeOrganization)
+                ? 'bg-gray-800 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+            }`}
+            onClick={() => handleOrganizationClick(organization.id)}
+          >
+            {organization.imageUrl ? (
+              <div className="h-6 w-6 flex-shrink-0 rounded-md overflow-hidden">
+                <img
+                  src={organization.imageUrl}
+                  alt={`${organization.name} logo`}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="h-6 w-6 flex-shrink-0 rounded-md bg-gray-700 flex items-center justify-center">
+                <span className="text-xs font-medium text-white">
+                  {organization.name.substring(0, 1).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <span className="flex-1 truncate text-sm">{organization.name}</span>
+          </Button>
         ))}
-      </Accordion>
-      <div className="mt-4 px-3">
-        <h2 className="mb-2 px-2 text-sm font-semibold text-gray-300">WORKSPACES</h2>
-        
-        <div className="space-y-1">
-          <button
-            className="flex items-center gap-2 w-full p-2 rounded-md bg-indigo-600/20 text-indigo-300 font-medium transition-colors hover:bg-indigo-600/30"
-          >
-            <div className="flex-shrink-0 w-4 h-4 rounded-sm bg-indigo-500"></div>
-            <span className="truncate">Personal Tasks</span>
-          </button>
-          
-          <button
-            className="flex items-center gap-2 w-full p-2 rounded-md text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-300"
-          >
-            <div className="flex-shrink-0 w-4 h-4 rounded-sm bg-gray-600"></div>
-            <span className="truncate">Team Projects</span>
-          </button>
-          
-          <button
-            className="flex items-center gap-2 w-full p-2 rounded-md text-gray-400 transition-colors hover:bg-gray-800 hover:text-gray-300"
-          >
-            <div className="flex-shrink-0 w-4 h-4 rounded-sm bg-gray-600"></div>
-            <span className="truncate">Client Work</span>
-          </button>
-        </div>
-        
-        <button className="flex items-center gap-2 mt-2 px-2 py-1 text-sm text-gray-400 hover:text-gray-300">
-          <PlusCircle size={16} />
-          <span>Add Workspace</span>
-        </button>
       </div>
     </div>
   );

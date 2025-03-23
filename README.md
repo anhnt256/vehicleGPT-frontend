@@ -166,5 +166,3 @@ SuperTodo is a modern task management application featuring a Kanban interface, 
 - Check browser console for JavaScript errors
 
 ---
-
-**SuperTodo Exercise for Senior Full Stack CoverGo 2025**

@@ -59,8 +59,6 @@ export async function createTodo(
     input.note = note;
   }
 
-  console.log('Dữ liệu gửi lên backend:', input);
-
   // GraphQL mutation
   const mutation = `
     mutation Mutation($input: CreateTodoInput!) {

@@ -16,14 +16,10 @@ export const PrivateRoute = ({ children }: PrivateRouteProps) => {
   const [isCheckingRole, setIsCheckingRole] = useState(false);
   const [roleChecked, setRoleChecked] = useState(false);
 
-  console.log('debug', isSignedIn);
-
   useEffect(() => {
     const verifyUserRole = async () => {
       // Nếu đã kiểm tra role, không đăng nhập, đang kiểm tra, hoặc không có thông tin user => return
       if (roleChecked || !isSignedIn || !user || isCheckingRole) return;
-
-      console.log('debug');
 
       // Kiểm tra token xác thực từ cookie
       const authToken = getAuthTokenFromCookie();
@@ -88,14 +84,12 @@ export const PrivateRoute = ({ children }: PrivateRouteProps) => {
     // Điều này sẽ đảm bảo redirect khi đã xác thực
     if (isLoaded && isSignedIn) {
       const authToken = getAuthTokenFromCookie();
-      console.log('Auth is loaded and signed in', authToken ? 'with token' : 'no token');
 
       if (!authToken) {
         // Lấy token trực tiếp từ Clerk nếu không tìm thấy trong cookie
         const { getToken } = useAuth();
         getToken().then((token) => {
           if (token) {
-            console.log('Setting token from Clerk');
             saveAuthToken(token);
           }
         });

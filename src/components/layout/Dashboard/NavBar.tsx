@@ -1,4 +1,5 @@
 import { OrganizationSwitcher, UserButton, useUser } from '@clerk/clerk-react';
+import { toast } from 'sonner';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Logo } from '@/components/logo';
 import { useLoaderData, useNavigate } from 'react-router-dom';
@@ -37,10 +38,11 @@ export const Navbar = () => {
       // Cập nhật UI
       navigate('/dashboard?userRole=paid', { replace: true });
 
-      alert('Chúc mừng! Bạn đã nâng cấp lên tài khoản Premium.');
+      toast.success('Chúc mừng! Bạn đã nâng cấp lên tài khoản Premium.');
+      setShowModel(false);
     } catch (error) {
       console.error('Lỗi khi nâng cấp tài khoản:', error);
-      alert('Có lỗi xảy ra khi nâng cấp tài khoản. Vui lòng thử lại sau.');
+      toast.error('Có lỗi xảy ra khi nâng cấp tài khoản. Vui lòng thử lại sau.');
     }
   };
 
@@ -53,7 +55,7 @@ export const Navbar = () => {
         <div className="ml-auto flex items-center gap-x-2">
           {isFreeUser ? (
             <div
-              className="bg-orange-500 text-white px-2 py-1 rounded-full text-sm"
+              className="bg-orange-500 text-white px-2 py-1 rounded-full text-sm cursor-pointer"
               onClick={handleUpgradeClick}
             >
               Upgrade to Pro

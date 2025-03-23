@@ -238,7 +238,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
       </div>
 
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-lg z-[1100]">
+        <DialogContent className="bg-gray-800/95 border-gray-700 text-white max-w-lg z-[1100] backdrop-filter backdrop-blur-sm">
           <DialogHeader>
             <DialogTitle>Delete Column: {column.title}</DialogTitle>
           </DialogHeader>

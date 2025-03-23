@@ -7,8 +7,6 @@
 export async function deleteTodo(id: string, token: string): Promise<boolean> {
   const endpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql';
 
-  console.log('Đang xóa todo với ID:', id);
-
   // GraphQL mutation
   const mutation = `
     mutation DeleteTodo($deleteTodoId: String!) {

@@ -61,7 +61,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('User logged in:', user.primaryEmailAddress?.emailAddress);
       getToken().then((token) => {
         if (token) {
-          console.log('Got token from Clerk, saving to cookie');
           saveAuthToken(token);
           setToken(token);
         }

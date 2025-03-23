@@ -14,8 +14,6 @@ function App() {
   useEffect(() => {
     // Chỉ chạy khi user đã load
     if (isLoaded && user) {
-      console.log('🔑 User logged in:', user.primaryEmailAddress?.emailAddress);
-
       // Lấy token từ Clerk và lưu vào cookie
       const saveTokenAndCheckRole = async () => {
         try {
@@ -23,22 +21,18 @@ function App() {
             template: 'SuperTodo',
           });
           if (token) {
-            console.log('📝 Saving token to cookie');
             saveAuthToken(token);
 
             // Gọi API kiểm tra vai trò người dùng
             if (user.primaryEmailAddress?.emailAddress) {
-              console.log('🔎 Checking user role');
               const email = user.primaryEmailAddress.emailAddress;
               try {
                 const userData = await checkUserRole(email);
-                console.log('👤 User role:', userData.role);
                 // Lưu userRole vào cookie
                 setCookie('userRole', userData.role, 7);
 
                 // Kiểm tra URL hiện tại xem đã ở dashboard chưa
                 if (!window.location.pathname.includes('/dashboard')) {
-                  console.log('📱 Redirecting to dashboard...');
                   window.location.href = `/dashboard?userRole=${userData.role}`;
                 }
               } catch (error) {
@@ -47,7 +41,6 @@ function App() {
 
                 // Redirect to dashboard even if role check fails
                 if (!window.location.pathname.includes('/dashboard')) {
-                  console.log('📱 Redirecting to dashboard with free role...');
                   window.location.href = '/dashboard?userRole=free';
                 }
               }

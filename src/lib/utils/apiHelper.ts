@@ -62,8 +62,6 @@ export async function callApi<T>(
       headers: getAuthHeaders(),
     };
 
-    console.log('debug', options);
-
     if (body) {
       options.body = JSON.stringify(body);
     }

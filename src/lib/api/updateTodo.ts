@@ -61,7 +61,8 @@ export async function updateTodo(
     }
 
     if (data.status !== undefined) {
-      input.status = statusMapping[data.status];
+      // Map status và thêm check để tránh undefined
+      input.status = statusMapping[data.status] || String(data.status).toUpperCase();
     }
 
     if (data.isCompleted !== undefined) {
@@ -71,8 +72,6 @@ export async function updateTodo(
     if (data.note !== undefined) {
       input.note = data.note;
     }
-
-    console.log('Dữ liệu cập nhật gửi lên backend:', input);
 
     // GraphQL mutation đã được cập nhật
     const mutation = `

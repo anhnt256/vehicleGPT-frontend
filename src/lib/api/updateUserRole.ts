@@ -14,8 +14,6 @@ export async function updateUserRole(email: string, role: string = 'paid'): Prom
     // Sử dụng helper function để thực hiện API call
     const data = await callApi(`${endpoint}/users/update-user-role`, 'POST', { email, role });
 
-    console.log('Cập nhật vai trò thành công:', data);
-
     return data;
   } catch (error) {
     console.error('Lỗi khi cập nhật vai trò người dùng:', error);

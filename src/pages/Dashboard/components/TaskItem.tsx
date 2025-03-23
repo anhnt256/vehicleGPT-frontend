@@ -91,9 +91,13 @@ const TaskItem: React.FC<TaskItemProps> = ({
     if (!editTitle.trim()) return;
 
     const updatedData: Partial<Task> = {
-      title: editTitle.trim(),
-      status: editStatus,
-      note: isPaidUser ? editNotes.trim() || undefined : undefined,
+      title: editTitle.trim() !== task.title ? editTitle.trim() : task.title,
+      status: editStatus !== task.status ? editStatus : task.status,
+      note: isPaidUser
+        ? editNotes.trim() !== task.note
+          ? editNotes.trim() || undefined
+          : task.note
+        : undefined,
     };
 
     handleUpdateTask(task.id, updatedData);

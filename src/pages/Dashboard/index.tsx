@@ -1,4 +1,4 @@
-import { LayoutType, Status, StatusColumn, Task } from '@/types';
+import { LayoutType, Status, StatusColumn, Task, TodoStatus } from '@/types';
 import { useEffect, useState, useRef } from 'react';
 import { useLoaderData, useNavigate } from 'react-router-dom';
 import KanbanColumn from './components/KanbanColumn';
@@ -122,8 +122,6 @@ function Dashboard() {
     })
   );
 
-  console.log('debug', userRole);
-
   useEffect(() => {
     if (!window.location.search.includes('userRole')) {
       // Lấy userRole từ cookie
@@ -141,7 +139,6 @@ function Dashboard() {
 
     const fetchTodos = async () => {
       try {
-        console.log('Bắt đầu fetch dữ liệu lần đầu');
         setIsLoading(true);
         setError(null);
 
@@ -361,7 +358,6 @@ function Dashboard() {
 
     // Kiểm tra xem overData có tồn tại và có type hợp lệ không
     if (!overData || !['task', 'column'].includes(overData.type)) {
-      console.log('Dropped on invalid target');
       return; // Trở về vị trí ban đầu
     }
 
@@ -472,108 +468,93 @@ function Dashboard() {
 
   // Add new task
   const handleAddTask = async (columnId: string, title: string, status?: Status, note?: string) => {
+    if (title.trim() === '') return;
+
     try {
-      // Lấy token từ cookie
-      const token = getAuthTokenFromCookie();
-      // Xác định status nếu không có
-      const statusToUse = status || (columns.find((col) => col.id === columnId)?.title as Status);
+      const authToken = getAuthTokenFromCookie();
 
-      // Gọi createTodo với các tham số riêng biệt theo đúng thứ tự
-      const createdTodo = await createTodo(title, statusToUse, token, note);
+      // Nếu không chỉ định status, sử dụng status của column hiện tại
+      const targetStatus =
+        status || columns.find((col) => col.id === columnId)?.title || TodoStatusType.TODO;
 
-      // Tạo task mới từ dữ liệu API trả về
-      const newTask: Task = {
+      // Tạo todo mới qua API
+      const createdTodo = await createTodo(title, targetStatus as TodoStatus, authToken, note);
+
+      // Tìm ĐÚNG columnId dựa trên status thực tế của task vừa tạo
+      const correctColumnId =
+        columns.find((col) => col.title.toUpperCase() === createdTodo.status.toUpperCase())?.id ||
+        columnId;
+
+      // Tạo task mới dựa trên response từ API
+      const newTask = {
         id: createdTodo.id,
         title: createdTodo.title,
         status: createdTodo.status as Status,
-        isCompleted: createdTodo.isCompleted,
+        // Tự động đánh dấu completed = true nếu status là DONE
+        isCompleted: createdTodo.status === 'DONE' || createdTodo.status === TodoStatusType.DONE,
         createdAt: new Date(createdTodo.createdAt),
         note: createdTodo.note || note || undefined,
       };
 
-      // Tìm column đích dựa trên status
-      const targetColumnId =
-        columns.find((col) => col.title === createdTodo.status)?.id || columnId;
-
-      // Thêm task vào column dựa trên status
+      // Cập nhật state cột với task mới, đảm bảo task được thêm vào đúng cột
       setColumns((prev) =>
-        prev.map((column) =>
-          column.id === targetColumnId ? { ...column, tasks: [...column.tasks, newTask] } : column
-        )
+        prev.map((col) => {
+          if (col.id === correctColumnId) {
+            return {
+              ...col,
+              tasks: [...col.tasks, newTask],
+            };
+          }
+          return col;
+        })
       );
 
+      // Reset form sau khi thêm thành công
       setAddingTaskToColumnId(null);
     } catch (error) {
-      console.error('Lỗi khi tạo Task mới:', error);
-      // Có thể hiển thị thông báo lỗi cho người dùng ở đây
-
-      // Tạm thời, vẫn thêm task vào UI dù API lỗi (có thể bỏ phần này nếu muốn)
-      const newTask: Task = {
-        id: `task-${Date.now()}`,
-        title,
-        status: status || (columns.find((col) => col.id === columnId)?.title as Status),
-        isCompleted: false,
-        createdAt: new Date(),
-        note: note,
-      };
-
-      // Hiển thị log lỗi nhưng vẫn thêm task vào UI
-      console.log('Đã thêm task vào UI dù API lỗi. Task:', newTask);
-
-      // Tìm column đích
-      const actualStatus = status || (columns.find((col) => col.id === columnId)?.title as Status);
-      const targetColumnId = columns.find((col) => col.title === actualStatus)?.id || columnId;
-
-      // Thêm task vào column
-      setColumns((prev) =>
-        prev.map((column) =>
-          column.id === targetColumnId ? { ...column, tasks: [...column.tasks, newTask] } : column
-        )
-      );
-
-      setAddingTaskToColumnId(null);
+      console.error('Error adding task:', error);
     }
   };
 
   // Hàm xử lý cập nhật task
-  const handleUpdateTask = async (taskId: string, updatedData: Partial<Task>) => {
+  const handleUpdateTask = async (taskId: string, data: Partial<Task>) => {
     try {
-      // Lấy token từ local storage
       const token = getAuthTokenFromCookie();
 
-      // Gọi API cập nhật todo
-      const result = await updateTodo(taskId, token, {
-        title: updatedData.title,
-        status: updatedData.status,
-        isCompleted: updatedData.isCompleted,
-        note: updatedData.note,
-      });
+      // Tạo bản sao của data để không ảnh hưởng tới dữ liệu gốc
+      const updateData = { ...data };
 
-      console.log('Cập nhật todo thành công:', result);
+      // Nếu status là DONE, tự động đánh dấu completed
+      if (data.status === TodoStatusType.DONE) {
+        updateData.isCompleted = true;
+      }
 
-      // Cập nhật UI
-      setColumns((prev) => {
+      // Gọi API cập nhật task với dữ liệu đã được điều chỉnh
+      const updatedTodo = await updateTodo(taskId, token, updateData);
+
+      // Cập nhật lại state columns với task đã được cập nhật
+      setColumns((prevColumns) => {
         // Tìm column chứa task cần cập nhật
-        const columnWithTask = prev.find((column) =>
+        const columnWithTask = prevColumns.find((column) =>
           column.tasks.some((task) => task.id === taskId)
         );
 
-        if (!columnWithTask) return prev;
+        if (!columnWithTask) return prevColumns;
 
         // Tạo bản sao của task cần cập nhật
         const taskToUpdate = { ...columnWithTask.tasks.find((task) => task.id === taskId)! };
 
         // Cập nhật dữ liệu task
-        const updatedTask = { ...taskToUpdate, ...updatedData };
+        const updatedTask = { ...taskToUpdate, ...updateData };
 
         // Nếu status thay đổi, di chuyển task giữa các column
-        if (updatedData.status && updatedData.status !== taskToUpdate.status) {
+        if (updateData.status && updateData.status !== taskToUpdate.status) {
           // Tìm column đích dựa trên status mới
-          const targetColumn = prev.find((col) => col.title === updatedData.status);
+          const targetColumn = prevColumns.find((col) => col.title === updateData.status);
 
-          if (!targetColumn) return prev;
+          if (!targetColumn) return prevColumns;
 
-          return prev.map((column) => {
+          return prevColumns.map((column) => {
             // Xóa task khỏi column cũ
             if (column.id === columnWithTask.id) {
               return {
@@ -593,19 +574,17 @@ function Dashboard() {
         }
 
         // Nếu status không thay đổi, chỉ cập nhật task
-        return prev.map((column) => ({
+        return prevColumns.map((column) => ({
           ...column,
           tasks: column.tasks.map((task) =>
-            task.id === taskId ? { ...task, ...updatedData } : task
+            task.id === taskId ? { ...task, ...updateData } : task
           ),
         }));
       });
 
       setEditingTaskId(null);
     } catch (error) {
-      console.error('Lỗi khi cập nhật task:', error);
-      // Vẫn cập nhật UI dù API lỗi
-      // (code cập nhật UI tương tự như trên)
+      console.error('Error updating task:', error);
     }
   };
 
@@ -619,8 +598,6 @@ function Dashboard() {
       const success = await deleteTodo(taskId, token);
 
       if (success) {
-        console.log('Xóa todo thành công, ID:', taskId);
-
         // Cập nhật UI sau khi xóa thành công
         setColumns((prev) =>
           prev.map((column) => ({
@@ -837,7 +814,7 @@ function Dashboard() {
                 <DragOverlay>
                   {activeTask && (
                     <div
-                      className="bg-gray-800 border border-gray-700 rounded-md p-3 shadow-xl opacity-95 min-w-[250px] max-w-[350px]"
+                      className="bg-gray-800/90 border border-gray-700 rounded-md p-3 shadow-xl min-w-[250px] max-w-[350px]"
                       style={{ transform: 'rotate(2deg)' }}
                     >
                       <div className="flex items-center gap-2">

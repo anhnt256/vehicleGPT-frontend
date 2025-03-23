@@ -124,6 +124,30 @@ SuperTodo is a modern task management application featuring a Kanban interface, 
 - Following naming conventions and folder organization
 - Ensuring complete type checking when developing with TypeScript
 
+## Additional Architectural Considerations
+
+### Project Architecture Evolution
+
+- **NextJS for Small Projects**: For smaller todo applications, using NextJS would be optimal as it handles both FE and BE in a single codebase, reducing complexity and development time.
+- **Separate FE/BE for Scalability**: As the project grows into something more feature-rich like ClickUp, separating frontend and backend becomes necessary for better maintainability and scalability.
+
+### Technology Selection Flexibility
+
+- **React vs Vue vs LynxJS**: While we've chosen React for this implementation, Vue could be an alternative for easier onboarding. For cross-platform needs, ByteDance's LynxJS would provide the advantage of supporting iOS and Android from a single codebase.
+- **Progressive Enhancement**: Our architecture allows for transitioning between technologies as the project requirements evolve.
+
+### State Management Scaling
+
+- **Context API for Small to Medium Apps**: Currently using Context API which adequately covers our needs while avoiding "context hell" through careful design.
+- **Redux for Complex State**: For larger applications with more complex state requirements, we should consider migrating to Redux for more robust state management.
+
+### Expansion Opportunities
+
+- **Team Collaboration**: Adding member invitation system and team management features
+- **Organization Structure**: Implementing organization hierarchy to manage different workspaces (Work, Personal, Departments)
+- **Custom Workflows**: Allowing users to define custom statuses and workflows for different projects
+- **Integration Ecosystem**: Building an API for third-party integrations and plugins
+
 ## Troubleshooting
 
 ### Authentication Issues

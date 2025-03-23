@@ -10,9 +10,6 @@ function App() {
   const { user, isLoaded } = useUser();
   const { getToken } = useAuth();
 
-  // Đảm bảo bất kỳ API endpoint nào cũng sử dụng biến môi trường
-  const apiUrl = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:4000';
-
   // Effect để xử lý đăng nhập và lưu token
   useEffect(() => {
     // Chỉ chạy khi user đã load

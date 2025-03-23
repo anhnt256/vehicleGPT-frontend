@@ -1,6 +1,7 @@
 import { ArrowRight, CheckIcon, Zap } from 'lucide-react';
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import dashboardPreview from '../../assets/demo.png';
 
 const LandingPage = () => {
   useDocumentTitle('Super Todo is super tool with AI');
@@ -118,7 +119,7 @@ const LandingPage = () => {
               <div className="relative">
                 {/* Ảnh mockup của app */}
                 <img
-                  src="/dashboard-preview.png"
+                  src={dashboardPreview}
                   alt="Super-Todo Dashboard Preview"
                   className="w-full"
                   onError={(e) => {

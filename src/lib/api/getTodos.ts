@@ -1,5 +1,4 @@
 import { Status, Task, TodoStatus } from '@/types';
-import { callApi } from '@/lib/utils/apiHelper';
 import { getAuthTokenFromCookie } from '@/lib/utils/cookie';
 
 // Interface cho Todo item từ API trả về
@@ -11,11 +10,6 @@ interface TodoResponse {
   note: string | null;
   createdAt: string;
   updatedAt: string;
-}
-
-// Interface cho response từ GraphQL query
-interface GetTodosResponse {
-  todos: TodoResponse[];
 }
 
 /**
@@ -89,9 +83,9 @@ export async function getTodos(): Promise<Task[]> {
       id: todo.id,
       title: todo.title,
       status: mapStatusFromBackend(todo.status),
-      completed: todo.isCompleted,
+      isCompleted: todo.isCompleted,
       createdAt: new Date(todo.createdAt),
-      notes: todo.note || undefined,
+      note: todo.note || undefined,
     }));
   } catch (error) {
     console.error('Error fetching todos:', error);

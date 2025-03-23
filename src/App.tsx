@@ -19,7 +19,9 @@ function App() {
       // Lấy token từ Clerk và lưu vào cookie
       const saveTokenAndCheckRole = async () => {
         try {
-          const token = await getToken();
+          const token = await getToken({
+            template: 'SuperTodo',
+          });
           if (token) {
             console.log('📝 Saving token to cookie');
             saveAuthToken(token);

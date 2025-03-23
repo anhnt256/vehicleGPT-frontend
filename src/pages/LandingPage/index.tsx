@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { ArrowRight, CheckIcon, Zap } from 'lucide-react';
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';

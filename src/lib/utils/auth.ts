@@ -8,26 +8,21 @@ import { saveAuthToken, getAuthTokenFromCookie } from './cookie';
  */
 export function useAuthToken() {
   const { getToken } = useAuth();
-  
+
   const getAuthToken = async () => {
     try {
-      // Định nghĩa interface mở rộng
-      interface CustomTokenOptions {
-        template?: string;
-      }
-
       // Lấy token với custom claims
       const token = await getToken({
         template: 'SuperTodo',
-      } as CustomTokenOptions);
-      
+      });
+
       return token;
     } catch (error) {
       console.error('Lỗi khi lấy auth token:', error);
       return null;
     }
   };
-  
+
   return { getAuthToken };
 }
 
@@ -35,7 +30,7 @@ export function useAuthToken() {
  * Lấy JWT token cho API request
  * Chỉ sử dụng cookie vì không thể sử dụng React hooks
  */
-export async function getAPIToken(userRole: string = 'free'): Promise<string> {
+export async function getAPIToken(): Promise<string> {
   // Sử dụng cookie thay vì localStorage
   return getAuthTokenFromCookie() || 'test_token';
 }
@@ -53,4 +48,4 @@ export function setAuthToken(token: string): void {
 // Xóa hàm này nếu nó chỉ là bản sao của hàm getAuthToken
 export function getAPITokenFromStorage(): string {
   return getAuthTokenFromCookie();
-} 
+}

@@ -37,7 +37,7 @@ const initialColumns: StatusColumn[] = [
         isCompleted: false,
         createdAt: new Date(),
         status: TodoStatusType.TODO,
-        notes: 'Need to start this soon.',
+        note: 'Need to start this soon.',
       },
       {
         id: 'task-3',
@@ -58,7 +58,7 @@ const initialColumns: StatusColumn[] = [
         isCompleted: false,
         createdAt: new Date(),
         status: TodoStatusType.IN_PROGRESS,
-        notes: 'Working on this now, should be done by Friday.',
+        note: 'Working on this now, should be done by Friday.',
       },
     ],
   },
@@ -164,7 +164,7 @@ function Dashboard() {
           status: todo.status as Status,
           isCompleted: todo.isCompleted,
           createdAt: new Date(todo.createdAt),
-          notes: todo.note || undefined,
+          note: todo.note || undefined,
         }));
 
         // Biến đổi dữ liệu để phù hợp với cấu trúc columns
@@ -242,7 +242,6 @@ function Dashboard() {
 
       // Case 1: Dragging over another task (reordering or changing column)
       if (overData?.type === 'task') {
-        const overTask = overData.task;
         const overColumn = columns.find((col) => col.tasks.some((task) => task.id === overId));
 
         if (!activeColumn || !overColumn) return;
@@ -382,7 +381,6 @@ function Dashboard() {
 
         // Case: Dropping on Task
         if (overData.type === 'task') {
-          const overTask = overData.task;
           const overColumn = columns.find((col) => col.tasks.some((task) => task.id === overId));
 
           if (!activeColumn || !overColumn) return;
@@ -490,7 +488,7 @@ function Dashboard() {
         status: createdTodo.status as Status,
         isCompleted: createdTodo.isCompleted,
         createdAt: new Date(createdTodo.createdAt),
-        notes: createdTodo.note || note || undefined,
+        note: createdTodo.note || note || undefined,
       };
 
       // Tìm column đích dựa trên status
@@ -516,7 +514,7 @@ function Dashboard() {
         status: status || (columns.find((col) => col.id === columnId)?.title as Status),
         isCompleted: false,
         createdAt: new Date(),
-        notes: note,
+        note: note,
       };
 
       // Hiển thị log lỗi nhưng vẫn thêm task vào UI
@@ -548,7 +546,7 @@ function Dashboard() {
         title: updatedData.title,
         status: updatedData.status,
         isCompleted: updatedData.isCompleted,
-        note: updatedData.notes,
+        note: updatedData.note,
       });
 
       console.log('Cập nhật todo thành công:', result);
@@ -694,7 +692,7 @@ function Dashboard() {
         status: updatedData.status || currentTask.status,
         // Đảo ngược trạng thái isCompleted hiện tại
         isCompleted: !currentTask.isCompleted,
-        note: updatedData.notes || currentTask.notes,
+        note: updatedData.note || currentTask.note,
       });
 
       // Cập nhật UI
@@ -816,7 +814,6 @@ function Dashboard() {
                           addingTaskToColumnId={addingTaskToColumnId}
                           setAddingTaskToColumnId={setAddingTaskToColumnId}
                           handleAddTask={handleAddTask}
-                          handleDragStart={handleDragStart}
                           editingTaskId={editingTaskId}
                           setEditingTaskId={setEditingTaskId}
                           handleUpdateTask={handleUpdateTask}
@@ -865,9 +862,9 @@ function Dashboard() {
                         )}
                         <span className="text-white font-medium">{activeTask.title}</span>
                       </div>
-                      {activeTask.notes && (
+                      {activeTask.note && (
                         <div className="mt-2 text-sm text-gray-300 line-clamp-2">
-                          {activeTask.notes}
+                          {activeTask.note}
                         </div>
                       )}
                     </div>

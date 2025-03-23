@@ -1,5 +1,5 @@
 // src/components/AccordionStatus.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   PlusCircle,
   ChevronDown,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import TaskItem from './TaskItem';
 import AddTaskForm from './AddTaskForm';
-import { StatusColumn, Task, Status } from '@/types';
+import { StatusColumn, Task, Status, TodoStatus } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,6 @@ interface AccordionStatusProps {
   addingTaskToColumnId: string | null;
   setAddingTaskToColumnId: (id: string | null) => void;
   handleAddTask: (columnId: string, title: string, status?: Status, notes?: string) => void;
-  handleDragStart: (e: React.DragEvent, taskId: string) => void;
   editingTaskId: string | null;
   setEditingTaskId: (id: string | null) => void;
   handleUpdateTask: (taskId: string, updatedData: Partial<Task>) => void;
@@ -50,7 +49,6 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
   addingTaskToColumnId,
   setAddingTaskToColumnId,
   handleAddTask,
-  handleDragStart,
   editingTaskId,
   setEditingTaskId,
   handleUpdateTask,
@@ -111,7 +109,7 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
   };
 
   // Tính số task đã hoàn thành
-  const completedTasks = column.tasks.filter((task) => task.completed).length;
+  const completedTasks = column.tasks.filter((task) => task.isCompleted).length;
   const totalTasks = column.tasks.length;
 
   return (
@@ -136,7 +134,7 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
           <input
             type="text"
             value={titleInput}
-            onChange={(e) => setTitleInput(e.target.value)}
+            onChange={(e) => setTitleInput(e.target.value as TodoStatus)}
             className="bg-gray-800 text-white text-sm py-1 px-2 rounded mr-auto"
             autoFocus
           />
@@ -248,7 +246,7 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
               <input
                 type="text"
                 value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
+                onChange={(e) => setTitleInput(e.target.value as TodoStatus)}
                 className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
                 autoFocus
               />
@@ -297,13 +295,13 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
                     <div key={task.id} className="py-2 border-b border-gray-600 last:border-b-0">
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-2 h-2 rounded-full ${task.completed ? 'bg-green-500' : 'bg-gray-400'}`}
+                          className={`w-2 h-2 rounded-full ${task.isCompleted ? 'bg-green-500' : 'bg-gray-400'}`}
                         ></div>
                         <p className="font-medium text-sm">{task.title}</p>
                       </div>
-                      {task.notes && (
+                      {task.note && (
                         <p className="text-xs text-gray-400 ml-4 mt-1 truncate">
-                          Note: {task.notes}
+                          Note: {task.note}
                         </p>
                       )}
                     </div>

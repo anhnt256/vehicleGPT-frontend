@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { PlusCircle, MoreHorizontal, Pencil, Trash, X, Check, GripVertical } from 'lucide-react';
 import TaskItem from './TaskItem';
 import AddTaskForm from './AddTaskForm';
-import { StatusColumn, Task, Status } from '@/types';
+import { StatusColumn, Task, Status, TodoStatus } from '@/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -92,7 +92,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   };
 
   // Tính số task đã hoàn thành
-  const completedTasks = column.tasks.filter((task) => task.completed).length;
+  const completedTasks = column.tasks.filter((task) => task.isCompleted).length;
   const totalTasks = column.tasks.length;
 
   return (
@@ -113,7 +113,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 <input
                   type="text"
                   value={titleInput}
-                  onChange={(e) => setTitleInput(e.target.value)}
+                  onChange={(e) => setTitleInput(e.target.value as TodoStatus)}
                   className="bg-gray-800 text-white text-sm py-1 px-2 rounded w-full"
                   autoFocus
                 />
@@ -237,8 +237,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </div>
       </div>
 
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} className="z-[1100]">
-        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-lg">
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-lg z-[1100]">
           <DialogHeader>
             <DialogTitle>Delete Column: {column.title}</DialogTitle>
           </DialogHeader>
@@ -260,13 +260,13 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                     <div key={task.id} className="py-2 border-b border-gray-600 last:border-b-0">
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-2 h-2 rounded-full ${task.completed ? 'bg-green-500' : 'bg-gray-400'}`}
+                          className={`w-2 h-2 rounded-full ${task.isCompleted ? 'bg-green-500' : 'bg-gray-400'}`}
                         ></div>
                         <p className="font-medium text-sm">{task.title}</p>
                       </div>
-                      {task.notes && (
+                      {task.note && (
                         <p className="text-xs text-gray-400 ml-4 mt-1 truncate">
-                          Note: {task.notes}
+                          Note: {task.note}
                         </p>
                       )}
                     </div>

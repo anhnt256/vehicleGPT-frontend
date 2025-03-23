@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { STATUS_LIST, allStatuses } from '@/utils/constants';
+import { allStatuses } from '@/utils/constants';
 
 interface TaskItemProps {
   task: Task;
@@ -46,7 +46,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
   handleToggleCompleted,
   activeOptionsTaskId,
   setActiveOptionsTaskId,
-  activeOptionsColumnId,
   setActiveOptionsColumnId,
   statusOptions = allStatuses,
 }) => {
@@ -56,14 +55,14 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   // State for editing
   const [editTitle, setEditTitle] = useState(task.title);
-  const [editNotes, setEditNotes] = useState(task.notes || '');
+  const [editNotes, setEditNotes] = useState(task.note || '');
   const [editStatus, setEditStatus] = useState<Status>(task.status);
 
   // Reset edit form when task changes or dialog opens
   useEffect(() => {
     if (showEditDialog || editingTaskId === task.id) {
       setEditTitle(task.title);
-      setEditNotes(task.notes || '');
+      setEditNotes(task.note || '');
       setEditStatus(task.status);
     }
   }, [task, showEditDialog, editingTaskId]);
@@ -94,7 +93,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
     const updatedData: Partial<Task> = {
       title: editTitle.trim(),
       status: editStatus,
-      notes: isPaidUser ? editNotes.trim() || undefined : undefined,
+      note: isPaidUser ? editNotes.trim() || undefined : undefined,
     };
 
     handleUpdateTask(task.id, updatedData);
@@ -129,21 +128,10 @@ const TaskItem: React.FC<TaskItemProps> = ({
     const updatedData: Partial<Task> = {
       title: task.title, // Sử dụng title hiện tại
       status: task.status, // Sử dụng status hiện tại
-      notes: task.notes, // Sử dụng notes hiện tại
+      note: task.note, // Sử dụng notes hiện tại
     };
 
     handleToggleCompleted(task.id, updatedData);
-  };
-
-  const handleDragStart = (e: React.MouseEvent) => {
-    // Dừng lan truyền sự kiện để tránh xung đột
-    e.stopPropagation();
-
-    // Thiết lập dữ liệu kéo thả
-    const dragEvent = e.nativeEvent as unknown as React.DragEvent;
-    if (dragEvent.dataTransfer) {
-      dragEvent.dataTransfer.setData('text/plain', task.id);
-    }
   };
 
   return (
@@ -220,7 +208,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           </div>
         </div>
 
-        {isPaidUser && task.notes && (
+        {isPaidUser && task.note && (
           <div className="mt-1 pl-5">
             <button
               type="button"
@@ -236,7 +224,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
             </button>
             {showNotes && (
               <div className="mt-0.5 text-xs text-gray-400 pl-3 border-l border-gray-700 overflow-x-auto">
-                {task.notes}
+                {task.note}
               </div>
             )}
           </div>
@@ -251,7 +239,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
           if (!open) {
             // Reset form when dialog closes
             setEditTitle(task.title);
-            setEditNotes(task.notes || '');
+            setEditNotes(task.note || '');
             setEditStatus(task.status);
           }
         }}

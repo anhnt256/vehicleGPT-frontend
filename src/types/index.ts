@@ -15,7 +15,7 @@ export interface Task {
   status: Status;
   isCompleted: boolean;
   createdAt: Date;
-  notes?: string;
+  note?: string;
 }
 
 export interface StatusColumn {

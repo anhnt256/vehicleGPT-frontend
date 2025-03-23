@@ -1,5 +1,4 @@
 import { Status, TodoStatus } from '@/types';
-import { getAuthTokenFromCookie } from '@/lib/utils/cookie';
 import { callApi } from '@/lib/utils/apiHelper';
 
 // Input cho createTodo
@@ -9,36 +8,15 @@ interface CreateTodoInput {
   note?: string; // Một note duy nhất khi tạo
 }
 
-// Đối tượng Note trong response
-interface Note {
-  id: string;
-  content: string;
-  todoId: string;
-  createdAt: string;
-}
-
 // Response từ createTodo
 interface TodoResponse {
   id: string;
   title: string;
-  status: string; // Status do người dùng định nghĩa
+  status: string;
+  isCompleted: boolean;
   createdAt: string;
   updatedAt: string;
   note: string | null;
-}
-
-// Response từ getTodo sẽ có notes là array
-interface TodoWithNotesResponse {
-  id: string;
-  title: string;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-  notes: Note[]; // API getTodo trả về mảng notes
-}
-
-interface CreateTodoResponse {
-  createTodo: TodoResponse;
 }
 
 /**
@@ -127,6 +105,7 @@ export async function createTodo(
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createTodoWithCookie(data: CreateTodoInput): Promise<any> {
   try {
     const endpoint = import.meta.env.VITE_API_ENDPOINT || 'http://localhost:4000';

@@ -29,7 +29,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       try {
         if (user) {
           // Lấy token từ Clerk
-          const clerkToken = await getToken();
+          const clerkToken = await getToken({
+            template: 'SuperTodo',
+          });
           if (clerkToken) {
             // Lưu token vào cookie thay vì localStorage
             saveAuthToken(clerkToken);
@@ -57,7 +59,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Nếu có user, đảm bảo token được lưu
     if (user) {
       console.log('User logged in:', user.primaryEmailAddress?.emailAddress);
-      getToken().then(token => {
+      getToken().then((token) => {
         if (token) {
           console.log('Got token from Clerk, saving to cookie');
           saveAuthToken(token);

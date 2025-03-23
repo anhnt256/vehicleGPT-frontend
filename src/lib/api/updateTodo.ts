@@ -1,5 +1,4 @@
 import { Status, TodoStatus } from '@/types';
-import { getAuthTokenFromCookie } from '@/lib/utils/cookie';
 
 // Interface cho input của updateTodo
 interface UpdateTodoInput {
@@ -107,9 +106,13 @@ export async function updateTodo(
     });
 
     const result = await response.json();
-
     // Kiểm tra lỗi UNAUTHENTICATED
-    if (result.errors && result.errors.some((e) => e.extensions?.code === 'UNAUTHENTICATED')) {
+    if (
+      result.errors &&
+      result.errors.some(
+        (e: { extensions?: { code: string } }) => e.extensions?.code === 'UNAUTHENTICATED'
+      )
+    ) {
       console.error('Token không hợp lệ hoặc đã hết hạn');
 
       // Xóa token và các cookie liên quan

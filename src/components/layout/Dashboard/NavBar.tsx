@@ -22,16 +22,21 @@ export const Navbar = () => {
 
   const handleUpgradePaidClick = async () => {
     try {
-      // Gọi API và xử lý phản hồi
-      const email = user.primaryEmailAddress.emailAddress;
+      // Sử dụng optional chaining (?.) để tránh lỗi null/undefined
+      const email = user?.primaryEmailAddress?.emailAddress;
+      if (!email) {
+        console.error('Email not available');
+        return;
+      }
+
       await updateUserRole(email, 'paid');
-      
+
       // Lưu role mới vào cookie
       setCookie('userRole', 'paid', 7);
-      
+
       // Cập nhật UI
       navigate('/dashboard?userRole=paid', { replace: true });
-      
+
       alert('Chúc mừng! Bạn đã nâng cấp lên tài khoản Premium.');
     } catch (error) {
       console.error('Lỗi khi nâng cấp tài khoản:', error);

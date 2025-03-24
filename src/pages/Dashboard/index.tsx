@@ -368,7 +368,12 @@ function Dashboard() {
         };
 
         // Đồng bộ với server nếu cần
-        updateTaskOnServer(activeId, { status: targetColumn.title });
+        updateTaskOnServer(activeId, {
+          status: targetColumn.title,
+          title: sourceTask.title,
+          note: sourceTask.note,
+          isCompleted: sourceTask.isCompleted,
+        });
       }
 
       setColumns(newColumns);

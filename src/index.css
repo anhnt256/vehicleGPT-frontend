@@ -1,0 +1,10 @@
+[data-sonner-toaster] {
+  position: fixed !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+[data-sonner-toast] {
+  transform-origin: center right !important;
+  transition: all 0.3s ease-in-out !important;
+}

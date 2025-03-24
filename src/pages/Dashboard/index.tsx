@@ -1,4 +1,4 @@
-import { LayoutType, Status, StatusColumn, Task, TodoStatus } from '@/types';
+import { LayoutType, Status, StatusColumn, Task } from '@/types';
 import { useEffect, useState, useRef } from 'react';
 import { useLoaderData, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -15,7 +15,7 @@ import {
   useSensors,
   DragOverlay,
 } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { createTodo } from '@/lib/api/createTodo';
 import { allStatuses } from '@/utils/constants';
 import { TodoStatus as TodoStatusType } from '@/types';
@@ -103,6 +103,8 @@ function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
+  const [activeDropId, setActiveDropId] = useState<string | null>(null);
+  const [activeDropType, setActiveDropType] = useState<'before' | 'after' | 'inside' | null>(null);
 
   // Sử dụng hook trong component
   const { getAuthToken } = useAuthToken();
@@ -216,254 +218,238 @@ function Dashboard() {
         const task = taskColumn.tasks.find((t) => t.id === taskId);
         if (task) setActiveTask(task);
       }
-    } else if (activeData?.type === 'column') {
-      setDraggingColumnId(active.id as string);
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    if (!over) {
+      setActiveDropId(null);
+      setActiveDropType(null);
+      return;
+    }
 
     const activeId = active.id as string;
     const overId = over.id as string;
     const activeData = active.data.current;
     const overData = over.data.current;
 
-    // Skip if nothing changed
-    if (activeId === overId) return;
+    // Chỉ xử lý kéo thả của task
+    if (activeData?.type !== 'task') return;
 
-    // Handle task movement
-    if (activeData?.type === 'task') {
-      // Find source and target columns
-      const activeColumn = columns.find((col) => col.tasks.some((task) => task.id === activeId));
-
-      // Case 1: Dragging over another task (reordering or changing column)
-      if (overData?.type === 'task') {
-        const overColumn = columns.find((col) => col.tasks.some((task) => task.id === overId));
-
-        if (!activeColumn || !overColumn) return;
-
-        setColumns((prev) => {
-          // Get the active task
-          const activeTask = activeColumn.tasks.find((task) => task.id === activeId);
-          if (!activeTask) return prev;
-
-          return prev.map((col) => {
-            // Handle reordering within the same column
-            if (col.id === activeColumn.id && col.id === overColumn.id) {
-              const oldIndex = col.tasks.findIndex((task) => task.id === activeId);
-              const newIndex = col.tasks.findIndex((task) => task.id === overId);
-
-              const newTasks = [...col.tasks];
-              newTasks.splice(oldIndex, 1);
-              newTasks.splice(newIndex, 0, activeTask);
-
-              return {
-                ...col,
-                tasks: newTasks,
-              };
-            }
-
-            // Remove from source column
-            if (col.id === activeColumn.id) {
-              return {
-                ...col,
-                tasks: col.tasks.filter((task) => task.id !== activeId),
-              };
-            }
-
-            // Add to target column
-            if (col.id === overColumn.id) {
-              const overTaskIndex = col.tasks.findIndex((task) => task.id === overId);
-              const newTasks = [...col.tasks];
-
-              // Insert at the right position
-              newTasks.splice(overTaskIndex, 0, { ...activeTask, status: col.title });
-
-              return {
-                ...col,
-                tasks: newTasks,
-              };
-            }
-
-            return col;
-          });
-        });
-      }
-
-      // Case 2: Dragging over a column
-      else if (overData?.type === 'column') {
-        const overColumn = columns.find((col) => col.id === overId);
-        if (!activeColumn || !overColumn) return;
-
-        setColumns((prev) => {
-          const activeTask = activeColumn.tasks.find((task) => task.id === activeId);
-          if (!activeTask) return prev;
-
-          return prev.map((col) => {
-            // Remove from source column
-            if (col.id === activeColumn.id) {
-              return {
-                ...col,
-                tasks: col.tasks.filter((task) => task.id !== activeId),
-              };
-            }
-
-            // Add to target column
-            if (col.id === overColumn.id) {
-              return {
-                ...col,
-                tasks: [...col.tasks, { ...activeTask, status: col.title }],
-              };
-            }
-
-            return col;
-          });
-        });
-      }
+    // Reset nếu kéo vào chính nó
+    if (activeId === overId) {
+      setActiveDropId(null);
+      setActiveDropType(null);
+      return;
     }
 
-    // Handle column reordering
-    else if (activeData?.type === 'column' && overData?.type === 'column') {
-      setColumns((prev) => {
-        const oldIndex = prev.findIndex((col) => col.id === activeId);
-        const newIndex = prev.findIndex((col) => col.id === overId);
-        return arrayMove(prev, oldIndex, newIndex);
-      });
+    // Xử lý kéo vào task
+    if (overData?.type === 'task') {
+      // Tính toán vị trí tương đối (trên/dưới)
+      const overRect = over.rect;
+      const overCenter = overRect.top + overRect.height / 2;
+
+      // Instead of event.clientY, use coordinates from the activator event
+      const clientY =
+        event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientY : overCenter;
+
+      // Use this value for positioning
+      const pointerPosition = clientY;
+
+      // Xác định vị trí dự kiến (trước hay sau task)
+      const isBeforeTask = pointerPosition < overCenter;
+
+      setActiveDropId(overId);
+      setActiveDropType(isBeforeTask ? 'before' : 'after');
+    }
+    // Xử lý kéo vào drop zone của column
+    else if (overData?.type === 'column-drop-zone') {
+      const columnId = overData.columnId;
+      setActiveDropId(columnId);
+      setActiveDropType('inside');
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    // Lấy dữ liệu từ đối tượng đang kéo
-    const activeId = active.id as string;
-    const activeData = active.data.current;
-
-    // Reset states
+    // Reset các state
     setDraggingTaskId(null);
     setDraggingColumnId(null);
     setActiveTask(null);
+    setActiveDropId(null);
+    setActiveDropType(null);
 
-    // Nếu không có vùng thả, chỉ reset states - không cần làm gì thêm
-    // Task/Column sẽ trở về vị trí ban đầu do không có thay đổi nào đối với state columns
     if (!over) return;
 
+    const activeId = active.id as string;
     const overId = over.id as string;
-
-    // Nếu kéo và thả cùng một item, không làm gì cả
-    if (activeId === overId) return;
-
+    const activeData = active.data.current;
     const overData = over.data.current;
 
-    // Kiểm tra xem overData có tồn tại và có type hợp lệ không
-    if (!overData || !['task', 'column'].includes(overData.type)) {
-      return; // Trở về vị trí ban đầu
+    // Chỉ xử lý task
+    if (activeData?.type !== 'task') return;
+
+    // Tìm task đang kéo
+    let sourceColumn: StatusColumn | undefined;
+    let sourceTask: Task | undefined;
+    let sourceColumnIndex = -1;
+
+    for (let i = 0; i < columns.length; i++) {
+      const column = columns[i];
+      const taskIndex = column.tasks.findIndex((task) => task.id === activeId);
+      if (taskIndex >= 0) {
+        sourceColumn = column;
+        sourceTask = column.tasks[taskIndex];
+        sourceColumnIndex = i;
+        break;
+      }
     }
 
-    // Kiểm tra xem đang kéo thả Task hay Column
-    if (activeData?.type === 'column' && overData.type === 'column') {
-      // Xử lý kéo thả columns
-      setColumns((prev) => {
-        const oldIndex = prev.findIndex((col) => col.id === activeId);
-        const newIndex = prev.findIndex((col) => col.id === overId);
-        return arrayMove(prev, oldIndex, newIndex);
-      });
-    } else if (activeData?.type === 'task') {
-      // Chỉ xử lý kéo thả tasks nếu target là task hoặc column
-      if (overData.type === 'task' || overData.type === 'column') {
-        // Find source and target columns
-        const activeColumn = columns.find((col) => col.tasks.some((task) => task.id === activeId));
+    if (!sourceColumn || !sourceTask) return;
 
-        // Case: Dropping on Task
-        if (overData.type === 'task') {
-          const overColumn = columns.find((col) => col.tasks.some((task) => task.id === overId));
+    // Xử lý 3 trường hợp: kéo vào task khác, kéo vào column trực tiếp, hoặc kéo vào dropzone
+    if (overData?.type === 'task') {
+      // Kéo vào task khác
+      let targetColumn: StatusColumn | undefined;
+      let targetIndex = -1;
+      let targetColumnIndex = -1;
 
-          if (!activeColumn || !overColumn) return;
-
-          setColumns((prev) => {
-            // Get the active task
-            const activeTask = activeColumn.tasks.find((task) => task.id === activeId);
-            if (!activeTask) return prev;
-
-            return prev.map((col) => {
-              // Handle reordering within the same column
-              if (col.id === activeColumn.id && col.id === overColumn.id) {
-                const oldIndex = col.tasks.findIndex((task) => task.id === activeId);
-                const newIndex = col.tasks.findIndex((task) => task.id === overId);
-
-                const newTasks = [...col.tasks];
-                newTasks.splice(oldIndex, 1);
-                newTasks.splice(newIndex, 0, activeTask);
-
-                return {
-                  ...col,
-                  tasks: newTasks,
-                };
-              }
-
-              // Remove from source column
-              if (col.id === activeColumn.id) {
-                return {
-                  ...col,
-                  tasks: col.tasks.filter((task) => task.id !== activeId),
-                };
-              }
-
-              // Add to target column
-              if (col.id === overColumn.id) {
-                const overTaskIndex = col.tasks.findIndex((task) => task.id === overId);
-                const newTasks = [...col.tasks];
-
-                // Insert at the right position
-                newTasks.splice(overTaskIndex, 0, { ...activeTask, status: col.title });
-
-                return {
-                  ...col,
-                  tasks: newTasks,
-                };
-              }
-
-              return col;
-            });
-          });
+      for (let i = 0; i < columns.length; i++) {
+        const column = columns[i];
+        const taskIndex = column.tasks.findIndex((task) => task.id === overId);
+        if (taskIndex >= 0) {
+          targetColumn = column;
+          targetIndex = taskIndex;
+          targetColumnIndex = i;
+          break;
         }
-
-        // Case: Dropping on Column
-        else if (overData.type === 'column') {
-          const overColumn = columns.find((col) => col.id === overId);
-          if (!activeColumn || !overColumn) return;
-
-          setColumns((prev) => {
-            const activeTask = activeColumn.tasks.find((task) => task.id === activeId);
-            if (!activeTask) return prev;
-
-            return prev.map((col) => {
-              // Remove from source column
-              if (col.id === activeColumn.id) {
-                return {
-                  ...col,
-                  tasks: col.tasks.filter((task) => task.id !== activeId),
-                };
-              }
-
-              // Add to target column
-              if (col.id === overColumn.id) {
-                return {
-                  ...col,
-                  tasks: [...col.tasks, { ...activeTask, status: col.title }],
-                };
-              }
-
-              return col;
-            });
-          });
-        }
-      } else {
-        console.log('Dropped task on invalid target type');
-        // Không làm gì, để task trở về vị trí ban đầu
       }
+
+      if (!targetColumn) return;
+
+      // Tạo bản sao của state
+      const newColumns = [...columns];
+
+      // Xóa task khỏi column nguồn
+      newColumns[sourceColumnIndex] = {
+        ...sourceColumn,
+        tasks: sourceColumn.tasks.filter((task) => task.id !== activeId),
+      };
+
+      // Nếu là cùng một column
+      if (sourceColumnIndex === targetColumnIndex) {
+        // Chèn task vào vị trí mới trong cùng column
+        const newTasks = [...newColumns[sourceColumnIndex].tasks];
+        newTasks.splice(targetIndex, 0, sourceTask);
+
+        newColumns[sourceColumnIndex] = {
+          ...newColumns[sourceColumnIndex],
+          tasks: newTasks,
+        };
+      } else {
+        // Nếu khác column, cập nhật status của task
+        const updatedTask = {
+          ...sourceTask,
+          status: targetColumn.title,
+        };
+
+        // Chèn task vào column đích
+        const newTasks = [...targetColumn.tasks];
+        newTasks.splice(targetIndex, 0, updatedTask);
+
+        newColumns[targetColumnIndex] = {
+          ...targetColumn,
+          tasks: newTasks,
+        };
+
+        // Đồng bộ với server nếu cần
+        updateTaskOnServer(activeId, { status: targetColumn.title });
+      }
+
+      setColumns(newColumns);
+    } else if (overData?.type === 'column-drop-zone') {
+      // Xử lý kéo vào drop zone trong column
+      const targetColumnId = overData.columnId;
+      const targetColumn = columns.find((col) => col.id === targetColumnId);
+
+      if (!targetColumn) return;
+
+      // Tạo bản sao của state
+      const newColumns = [...columns];
+
+      // Xóa task khỏi column nguồn
+      newColumns[sourceColumnIndex] = {
+        ...sourceColumn,
+        tasks: sourceColumn.tasks.filter((task) => task.id !== activeId),
+      };
+
+      // Cập nhật status của task
+      const updatedTask = {
+        ...sourceTask,
+        status: targetColumn.title,
+      };
+
+      // Tìm index của column đích
+      const targetColumnIndex = columns.findIndex((col) => col.id === targetColumnId);
+
+      // Thêm task vào cuối column đích
+      newColumns[targetColumnIndex] = {
+        ...targetColumn,
+        tasks: [...targetColumn.tasks, updatedTask],
+      };
+
+      setColumns(newColumns);
+
+      // Đồng bộ với server
+      updateTaskOnServer(activeId, { status: targetColumn.title });
+    } else if (overData?.type === 'column') {
+      // Kéo vào column
+      const targetColumnId = overId;
+      const targetColumn = columns.find((col) => col.id === targetColumnId);
+
+      if (!targetColumn) return;
+
+      // Tạo bản sao của state
+      const newColumns = [...columns];
+
+      // Xóa task khỏi column nguồn
+      newColumns[sourceColumnIndex] = {
+        ...sourceColumn,
+        tasks: sourceColumn.tasks.filter((task) => task.id !== activeId),
+      };
+
+      // Cập nhật status của task
+      const updatedTask = {
+        ...sourceTask,
+        status: targetColumn.title,
+      };
+
+      // Tìm index của column đích
+      const targetColumnIndex = columns.findIndex((col) => col.id === targetColumnId);
+
+      // Thêm task vào cuối column đích
+      newColumns[targetColumnIndex] = {
+        ...targetColumn,
+        tasks: [...targetColumn.tasks, updatedTask],
+      };
+
+      setColumns(newColumns);
+
+      // Đồng bộ với server nếu cần
+      updateTaskOnServer(activeId, { status: targetColumn.title });
+    }
+  };
+
+  // Hàm hỗ trợ đồng bộ với server
+  const updateTaskOnServer = async (taskId: string, updatedData: Partial<Task>) => {
+    try {
+      const token = getAuthTokenFromCookie();
+      await updateTodo(taskId, token, updatedData);
+    } catch (error) {
+      console.error('Error updating task on server:', error);
+      // Có thể thêm logic rollback UI nếu cần
     }
   };
 
@@ -471,54 +457,59 @@ function Dashboard() {
   const handleAddTask = async (
     columnId: string,
     title: string,
-    status?: Status,
     notes?: string
   ) => {
+    if (!title.trim()) return;
+
     try {
       setIsLoading(true);
 
-      // Sử dụng getAuthTokenFromCookie
+      // Lấy token từ cookie
       const token = getAuthTokenFromCookie();
 
-      const response = await createTodo(title, status || TodoStatus.TODO, token, notes);
+      // Xác định status dựa trên column mà người dùng đang thêm
+      const columnStatus = columns.find((col) => col.id === columnId)?.title || TodoStatusType.TODO;
+
+      // Tạo task trên server
+      const response = await createTodo(title, columnStatus, token, notes);
 
       if (response.errors) {
         toast.error('Error creating task: ' + response.errors.join(', '));
         return;
       }
 
-      toast.success('Task created successfully');
-
-      // Tìm ĐÚNG columnId dựa trên status thực tế của task vừa tạo
-      const correctColumnId =
-        columns.find((col) => col.title.toUpperCase() === response.data?.status.toUpperCase())
-          ?.id || columnId;
-
-      // Đảm bảo response.data tồn tại và có id trước khi tạo task mới
+      // Nếu server trả về dữ liệu hợp lệ
       if (response.data && response.data.id) {
-        // Tạo task mới dựa trên response từ API với các trường bắt buộc
+        // Tạo task mới với dữ liệu từ API
         const newTask: Task = {
-          id: response.data.id, // Đảm bảo id luôn là string
-          title: response.data.title || title, // Dùng title từ input nếu API không trả về
-          status: response.data.status as Status,
-          isCompleted:
-            response.data.status === 'DONE' || response.data.status === TodoStatusType.DONE,
+          id: response.data.id,
+          title: response.data.title || title,
+          status: columnStatus, // Sử dụng status của column hiện tại
+          isCompleted: columnStatus === TodoStatusType.DONE,
           createdAt: new Date(response.data.createdAt),
           note: response.data.note || notes || undefined,
         };
 
-        // Cập nhật state cột với task mới, đảm bảo task được thêm vào đúng cột
-        setColumns((prev) =>
-          prev.map((col) => {
-            if (col.id === correctColumnId) {
-              return {
-                ...col,
-                tasks: [...col.tasks, newTask],
-              };
-            }
-            return col;
-          })
-        );
+        // Sử dụng requestAnimationFrame để cập nhật UI mượt mà
+        requestAnimationFrame(() => {
+          // Thêm task vào đúng column mà người dùng đã chọn
+          setColumns((prev) =>
+            prev.map((col) => {
+              if (col.id === columnId) {
+                return {
+                  ...col,
+                  tasks: [...col.tasks, newTask],
+                };
+              }
+              return col;
+            })
+          );
+
+          // Hiển thị toast thành công
+          setTimeout(() => {
+            toast.success('Task created successfully');
+          }, 100);
+        });
       } else {
         toast.error('Cannot create task: Missing data from API');
       }
@@ -792,6 +783,8 @@ function Dashboard() {
                           setActiveOptionsColumnId={setActiveOptionsColumnId}
                           draggingTaskId={draggingTaskId}
                           statusOptions={allStatuses}
+                          activeDropId={activeDropId}
+                          activeDropType={activeDropType}
                         />
                       ))}
                     </SortableContext>

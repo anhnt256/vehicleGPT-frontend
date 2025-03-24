@@ -15,7 +15,21 @@ if (!PUBLISHABLE_KEY) {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-      <Toaster />
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        toastOptions={{
+          duration: 4000,
+          className: 'my-toast',
+          style: {
+            opacity: 1,
+            animationDuration: '300ms',
+            transition: 'all 0.3s ease-in-out',
+            transform: 'translateY(0)',
+          },
+        }}
+      />
       <App />
     </ClerkProvider>
   </React.StrictMode>

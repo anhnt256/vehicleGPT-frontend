@@ -5,10 +5,13 @@ import {
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
+  GripVertical,
   Pencil,
   Trash,
 } from 'lucide-react';
 import { Status, Task } from '@/types';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +34,7 @@ interface TaskItemProps {
   activeOptionsColumnId: string | null;
   setActiveOptionsColumnId: (id: string | null) => void;
   statusOptions: string[];
+  enableDragDrop?: boolean;
 }
 
 const TaskItem: React.FC<TaskItemProps> = ({
@@ -45,6 +49,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   setActiveOptionsTaskId,
   setActiveOptionsColumnId,
   statusOptions = allStatuses,
+  enableDragDrop = false,
 }) => {
   const [showNotes, setShowNotes] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -118,39 +123,69 @@ const TaskItem: React.FC<TaskItemProps> = ({
     handleToggleCompleted(task.id, updatedData);
   };
 
+  // Chỉ sử dụng useSortable khi enableDragDrop = true
+  const dragDropProps = enableDragDrop
+    ? useSortable({
+        id: task.id,
+        data: {
+          type: 'task',
+          task,
+        },
+      })
+    : {
+        attributes: {},
+        listeners: {},
+        setNodeRef: () => {}, // Hàm trống
+        transform: null,
+        transition: null,
+        isDragging: false,
+      };
+
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dragDropProps;
+
+  // Handle null transition value
+  const style = enableDragDrop
+    ? {
+        transform: CSS.Transform.toString(transform),
+        transition: transition || undefined, // Convert null to undefined
+        opacity: isDragging ? 0 : 1,
+        zIndex: isDragging ? 999 : 'auto',
+      }
+    : {};
+
+  const toggleNotes = () => {
+    setShowNotes(!showNotes);
+  };
+
   return (
     <>
-      <div className="w-full bg-gray-800 hover:bg-gray-750 rounded-md p-3 relative group">
+      <div
+        ref={enableDragDrop ? setNodeRef : undefined}
+        style={style}
+        {...(enableDragDrop ? attributes : {})}
+        className={`w-full bg-gray-800 hover:bg-gray-750 rounded-md p-3 relative group 
+          ${enableDragDrop ? 'border border-gray-700 mb-2 shadow-sm' : ''}`}
+      >
         <div className="flex items-start gap-2">
           {/* Left side with checkbox and drag handle */}
           <div className="flex flex-col items-center gap-1">
-            <div className="cursor-move text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+            {/* Chỉ hiển thị handle khi enableDragDrop = true */}
+            {enableDragDrop && (
+              <div
+                className="cursor-move text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                {...listeners}
               >
-                <circle cx="9" cy="5" r="1" />
-                <circle cx="9" cy="12" r="1" />
-                <circle cx="9" cy="19" r="1" />
-                <circle cx="15" cy="5" r="1" />
-                <circle cx="15" cy="12" r="1" />
-                <circle cx="15" cy="19" r="1" />
-              </svg>
-            </div>
+                <GripVertical size={16} />
+              </div>
+            )}
             <button
               onClick={handleToggleTask}
               className="flex-shrink-0 text-gray-400 hover:text-white"
             >
               {task.isCompleted ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                <CheckCircle size={16} className="text-green-500" />
               ) : (
-                <Circle className="h-5 w-5" />
+                <Circle size={16} />
               )}
             </button>
           </div>
@@ -182,7 +217,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <button
                   type="button"
                   className="flex items-center text-xs text-gray-400 hover:text-gray-300"
-                  onClick={() => setShowNotes(!showNotes)}
+                  onClick={toggleNotes}
                 >
                   {showNotes ? (
                     <ChevronDown size={12} className="mr-1 flex-shrink-0" />

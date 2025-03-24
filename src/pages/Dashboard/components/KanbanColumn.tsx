@@ -1,11 +1,9 @@
 // src/components/KanbanColumn.tsx
 import React, { useState } from 'react';
-import { PlusCircle, MoreHorizontal, Pencil, Trash, X, Check, GripVertical } from 'lucide-react';
+import { PlusCircle, Trash, X, Check } from 'lucide-react';
 import TaskItem from './TaskItem';
 import AddTaskForm from './AddTaskForm';
 import { StatusColumn, Task, Status, TodoStatus } from '@/types';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import {
   Dialog,
@@ -14,6 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { useDroppable } from '@dnd-kit/core';
 
 interface KanbanColumnProps {
   column: StatusColumn;
@@ -36,6 +35,8 @@ interface KanbanColumnProps {
   setActiveOptionsTaskId: (id: string | null) => void;
   draggingTaskId: string | null;
   statusOptions: Status[];
+  activeDropId: string | null;
+  activeDropType: 'before' | 'after' | 'inside' | null;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -59,55 +60,30 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   setActiveOptionsTaskId,
   draggingTaskId,
   statusOptions,
+  activeDropId,
+  activeDropType,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: column.id,
-    data: {
-      type: 'column',
-      column,
-    },
-  });
-
   const [titleInput, setTitleInput] = useState(column.title);
-  const showOptions = activeOptionsColumnId === column.id;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0 : 1,
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveOptionsColumnId(null);
-    setShowDeleteDialog(true);
-  };
-
-  const handleEditClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setTitleInput(column.title);
-    setEditingColumnId(column.id);
-    setActiveOptionsColumnId(null);
-  };
 
   // Tính số task đã hoàn thành
   const completedTasks = column.tasks.filter((task) => task.isCompleted).length;
   const totalTasks = column.tasks.length;
 
+  // Thêm droppable zone
+  const { isOver, setNodeRef } = useDroppable({
+    id: `droppable-${column.id}`,
+    data: {
+      type: 'column-drop-zone',
+      columnId: column.id,
+    },
+  });
+
   return (
     <>
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="flex-shrink-0 w-[85vw] sm:w-[320px] md:w-[350px] flex flex-col bg-gray-800 rounded-lg overflow-hidden"
-      >
+      <div className="flex-shrink-0 w-[85vw] sm:w-[320px] md:w-[350px] flex flex-col bg-gray-800 rounded-lg overflow-hidden">
         <div className="p-2 sm:p-3 bg-gray-700 flex items-center justify-between">
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <div className="cursor-move self-center mr-1" {...listeners} {...attributes}>
-              <GripVertical size={16} className="text-gray-500" />
-            </div>
-
             {editingColumnId === column.id ? (
               <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
                 <input
@@ -145,43 +121,6 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               </div>
             )}
           </div>
-
-          <div className="ml-auto relative">
-            <button
-              className="text-gray-400 hover:text-white p-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (showOptions) {
-                  setActiveOptionsColumnId(null);
-                } else {
-                  setActiveOptionsTaskId(null);
-                  setActiveOptionsColumnId(column.id);
-                }
-              }}
-            >
-              <MoreHorizontal size={20} />
-            </button>
-
-            {showOptions && (
-              <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 z-50 min-w-40 border border-gray-700">
-                <button
-                  className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
-                  onClick={handleEditClick}
-                >
-                  <Pencil size={14} />
-                  <span>Edit Column</span>
-                </button>
-                <div className="border-t border-gray-700 my-1"></div>
-                <button
-                  className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-700"
-                  onClick={handleDeleteClick}
-                >
-                  <Trash size={14} />
-                  <span>Delete Column</span>
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         <div
@@ -193,24 +132,64 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
+              {/* Hiển thị placeholder cho column trống - đặt ở đầu để luôn hiển thị khi cần */}
+              {activeDropId === column.id && activeDropType === 'inside' && (
+                <div className="h-16 w-full border-2 border-dashed border-indigo-500/50 rounded-md flex items-center justify-center my-2">
+                  <span className="text-indigo-500 text-sm">Drop here</span>
+                </div>
+              )}
+
+              {/* Hiển thị các task */}
               {column.tasks.map((task: Task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  isPaidUser={isPaidUser}
-                  editingTaskId={editingTaskId}
-                  setEditingTaskId={setEditingTaskId}
-                  handleUpdateTask={handleUpdateTask}
-                  handleDeleteTask={handleDeleteTask}
-                  handleToggleCompleted={handleToggleCompleted}
-                  activeOptionsTaskId={activeOptionsTaskId}
-                  setActiveOptionsTaskId={setActiveOptionsTaskId}
-                  activeOptionsColumnId={activeOptionsColumnId}
-                  setActiveOptionsColumnId={setActiveOptionsColumnId}
-                  statusOptions={statusOptions}
-                />
+                <>
+                  {activeDropId === task.id && activeDropType === 'before' && (
+                    <div className="h-2 w-full bg-indigo-500 rounded-md animate-pulse my-1"></div>
+                  )}
+
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    isPaidUser={isPaidUser}
+                    editingTaskId={editingTaskId}
+                    setEditingTaskId={setEditingTaskId}
+                    handleUpdateTask={handleUpdateTask}
+                    handleDeleteTask={handleDeleteTask}
+                    handleToggleCompleted={handleToggleCompleted}
+                    activeOptionsTaskId={activeOptionsTaskId}
+                    setActiveOptionsTaskId={setActiveOptionsTaskId}
+                    activeOptionsColumnId={activeOptionsColumnId}
+                    setActiveOptionsColumnId={setActiveOptionsColumnId}
+                    statusOptions={statusOptions}
+                    enableDragDrop={true}
+                  />
+
+                  {activeDropId === task.id && activeDropType === 'after' && (
+                    <div className="h-2 w-full bg-indigo-500 rounded-md animate-pulse my-1"></div>
+                  )}
+                </>
               ))}
 
+              {/* Dedicated drop zone - Chỉ hiển thị khi column không có task */}
+              {column.tasks.length === 0 && (
+                <div
+                  ref={setNodeRef}
+                  className={`h-16 w-full border-2 border-dashed rounded-md flex items-center justify-center my-2 transition-colors ${
+                    isOver
+                      ? 'border-indigo-500 bg-indigo-500/10'
+                      : 'border-gray-600 hover:border-gray-500'
+                  }`}
+                >
+                  <span
+                    className={`text-sm transition-opacity ${
+                      isOver ? 'text-indigo-400' : 'text-gray-500 opacity-50'
+                    }`}
+                  >
+                    {isOver ? 'Drop here' : 'Drop tasks here'}
+                  </span>
+                </div>
+              )}
+
+              {/* Add Task button or form */}
               {addingTaskToColumnId === column.id ? (
                 <AddTaskForm
                   onAdd={(title, status, notes) => handleAddTask(column.id, title, status, notes)}

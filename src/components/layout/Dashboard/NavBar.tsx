@@ -38,11 +38,11 @@ export const Navbar = () => {
       // Cập nhật UI
       navigate('/dashboard?userRole=paid', { replace: true });
 
-      toast.success('Chúc mừng! Bạn đã nâng cấp lên tài khoản Premium.');
+      toast.success('Account upgraded to Premium!');
       setShowModel(false);
     } catch (error) {
-      console.error('Lỗi khi nâng cấp tài khoản:', error);
-      toast.error('Có lỗi xảy ra khi nâng cấp tài khoản. Vui lòng thử lại sau.');
+      console.error('Error upgrading account:', error);
+      toast.error('Failed to upgrade account. Please try again.');
     }
   };
 

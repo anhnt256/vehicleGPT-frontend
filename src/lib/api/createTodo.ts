@@ -103,7 +103,7 @@ export async function createTodo(
     return { data: result.data?.createTodo };
   } catch (error) {
     console.error('Error creating todo:', error);
-    return { errors: [(error as Error).message] };
+    throw error;
   }
 }
 
@@ -117,7 +117,7 @@ export async function createTodoWithCookie(data: CreateTodoInput): Promise<any> 
 
     return response;
   } catch (error) {
-    console.error('Lỗi khi tạo todo:', error);
+    console.error('Error creating todo:', error);
     throw error;
   }
 }

@@ -16,7 +16,7 @@ export async function updateUserRole(email: string, role: string = 'paid'): Prom
 
     return data;
   } catch (error) {
-    console.error('Lỗi khi cập nhật vai trò người dùng:', error);
+    console.error('Error updating user role:', error);
     throw error;
   }
 }

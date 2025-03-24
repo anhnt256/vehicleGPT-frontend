@@ -454,11 +454,7 @@ function Dashboard() {
   };
 
   // Add new task
-  const handleAddTask = async (
-    columnId: string,
-    title: string,
-    notes?: string
-  ) => {
+  const handleAddTask = async (columnId: string, title: string, notes?: string) => {
     if (!title.trim()) return;
 
     try {
@@ -490,32 +486,28 @@ function Dashboard() {
           note: response.data.note || notes || undefined,
         };
 
-        // Sử dụng requestAnimationFrame để cập nhật UI mượt mà
-        requestAnimationFrame(() => {
-          // Thêm task vào đúng column mà người dùng đã chọn
-          setColumns((prev) =>
-            prev.map((col) => {
-              if (col.id === columnId) {
-                return {
-                  ...col,
-                  tasks: [...col.tasks, newTask],
-                };
-              }
-              return col;
-            })
-          );
+        setColumns((prev) =>
+          prev.map((col) => {
+            if (col.id === columnId) {
+              return {
+                ...col,
+                tasks: [...col.tasks, newTask],
+              };
+            }
+            return col;
+          })
+        );
 
-          // Hiển thị toast thành công
-          setTimeout(() => {
-            toast.success('Task created successfully');
-          }, 100);
-        });
+        // Hiển thị toast thành công
+        setTimeout(() => {
+          toast.success('Task added successfully');
+        }, 100);
       } else {
         toast.error('Cannot create task: Missing data from API');
       }
     } catch (error) {
       console.error('Error adding task:', error);
-      toast.error('An error occurred while creating the task. Please try again later.');
+      toast.error('Failed to add task. Please try again.');
     } finally {
       setIsLoading(false);
       setAddingTaskToColumnId(null);
@@ -599,7 +591,7 @@ function Dashboard() {
       setEditingTaskId(null);
     } catch (error) {
       console.error('Error updating task:', error);
-      toast.error('An error occurred while updating the task. Please try again later.');
+      toast.error('Failed to update task. Please try again.');
     }
   };
 
@@ -623,7 +615,7 @@ function Dashboard() {
         toast.success('Task deleted successfully');
       } else {
         console.warn('API returned unsuccessful deletion result');
-        toast.error('An error occurred while deleting the task. Please try again later.');
+        toast.error('Failed to delete task. Please try again.');
       }
     } catch (error) {
       console.error('Error deleting task:', error);
@@ -647,11 +639,13 @@ function Dashboard() {
       )
     );
     setEditingColumnId(null);
+    toast.success('Column updated successfully');
   };
 
   // Hàm xử lý xóa column
   const handleDeleteColumn = (columnId: string) => {
     setColumns((prev) => prev.filter((column) => column.id !== columnId));
+    toast.success('Column deleted successfully');
   };
 
   // Hàm toggle completed status
@@ -691,9 +685,12 @@ function Dashboard() {
           ),
         }))
       );
+      toast.success(
+        !currentTask.isCompleted ? 'Task marked as completed' : 'Task marked as incomplete'
+      );
     } catch (error) {
-      console.error('Error updating completion status:', error);
-      // Vẫn cập nhật UI dù API lỗi
+      console.error('Error toggling task completion:', error);
+      toast.error('Failed to update task status. Please try again.');
     }
   };
 

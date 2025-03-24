@@ -117,7 +117,7 @@ export async function updateTodo(
 
     // Handle UNAUTHENTICATED errors
     if (result.errors && result.errors.some((e) => e.extensions?.code === 'UNAUTHENTICATED')) {
-      console.error('Token không hợp lệ hoặc đã hết hạn');
+      console.error('Token invalid or expired');
 
       // Xóa token và các cookie liên quan
       document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
@@ -125,7 +125,7 @@ export async function updateTodo(
 
       // Chuyển hướng về trang chủ
       window.location.href = '/';
-      return { errors: ['Token không hợp lệ hoặc đã hết hạn'] };
+      return { errors: ['Token invalid or expired'] };
     }
 
     return { data: result.data?.updateTodo };

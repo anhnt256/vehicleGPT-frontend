@@ -1,4 +1,5 @@
 import { Status, TodoStatus } from '@/types';
+import { GraphQLResponse } from '@/types/graphql';
 import { callApi } from '@/lib/utils/apiHelper';
 
 // Input cho createTodo
@@ -25,14 +26,14 @@ interface TodoResponse {
  * @param status - The status of the todo (TO DO, IN PROGRESS, DONE)
  * @param token - The authentication token
  * @param note - Optional note for the todo
- * @returns Promise with the created todo data
+ * @returns Promise with the created todo data and any errors
  */
 export async function createTodo(
   title: string,
   status: Status,
   token: string,
   note?: string
-): Promise<TodoResponse> {
+): Promise<{ data?: TodoResponse; errors?: string[] }> {
   const endpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql';
 
   // Cập nhật statusMapping để sử dụng enum dạng viết hoa
@@ -74,7 +75,7 @@ export async function createTodo(
   `;
 
   try {
-    // Execute the GraphQL mutation với token trực tiếp từ tham số
+    // Execute the GraphQL mutation
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -88,13 +89,21 @@ export async function createTodo(
     });
 
     // Parse the response
-    const result = await response.json();
+    const result = (await response.json()) as GraphQLResponse<TodoResponse>;
+
+    // Handle errors
+    if (result.errors && result.errors.length > 0) {
+      const errorMessages = result.errors.map((err) =>
+        err.extensions?.details?.length ? err.extensions.details[0] : err.message
+      );
+      return { errors: errorMessages };
+    }
 
     // Return the created todo
-    return result.data?.createTodo;
+    return { data: result.data?.createTodo };
   } catch (error) {
     console.error('Error creating todo:', error);
-    throw error;
+    return { errors: [(error as Error).message] };
   }
 }
 

@@ -185,8 +185,8 @@ function Dashboard() {
 
         setColumns(updatedColumns);
       } catch (err) {
-        console.error('Lỗi khi tải todos:', err);
-        setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+        console.error('Error loading todos:', err);
+        setError('Could not load data. Please try again later.');
         // Reset flag nếu có lỗi để có thể thử lại
         hasFetchedRef.current = false;
       } finally {
@@ -468,35 +468,43 @@ function Dashboard() {
   };
 
   // Add new task
-  const handleAddTask = async (columnId: string, title: string, status?: Status, note?: string) => {
-    if (title.trim() === '') return;
-
+  const handleAddTask = async (
+    columnId: string,
+    title: string,
+    status?: Status,
+    notes?: string
+  ) => {
     try {
-      const authToken = getAuthTokenFromCookie();
+      setIsLoading(true);
 
-      // Nếu không chỉ định status, sử dụng status của column hiện tại
-      const targetStatus =
-        status || columns.find((col) => col.id === columnId)?.title || TodoStatusType.TODO;
+      // Sử dụng getAuthTokenFromCookie
+      const token = getAuthTokenFromCookie();
 
-      // Tạo todo mới qua API
-      const createdTodo = await createTodo(title, targetStatus as TodoStatus, authToken, note);
+      const response = await createTodo(title, status || TodoStatus.TODO, token, notes);
 
-      if (createdTodo) {
-        toast.success('Task created successfully');
-        // Tìm ĐÚNG columnId dựa trên status thực tế của task vừa tạo
-        const correctColumnId =
-          columns.find((col) => col.title.toUpperCase() === createdTodo.status.toUpperCase())?.id ||
-          columnId;
+      if (response.errors) {
+        toast.error('Error creating task: ' + response.errors.join(', '));
+        return;
+      }
 
-        // Tạo task mới dựa trên response từ API
-        const newTask = {
-          id: createdTodo.id,
-          title: createdTodo.title,
-          status: createdTodo.status as Status,
-          // Tự động đánh dấu completed = true nếu status là DONE
-          isCompleted: createdTodo.status === 'DONE' || createdTodo.status === TodoStatusType.DONE,
-          createdAt: new Date(createdTodo.createdAt),
-          note: createdTodo.note || note || undefined,
+      toast.success('Task created successfully');
+
+      // Tìm ĐÚNG columnId dựa trên status thực tế của task vừa tạo
+      const correctColumnId =
+        columns.find((col) => col.title.toUpperCase() === response.data?.status.toUpperCase())
+          ?.id || columnId;
+
+      // Đảm bảo response.data tồn tại và có id trước khi tạo task mới
+      if (response.data && response.data.id) {
+        // Tạo task mới dựa trên response từ API với các trường bắt buộc
+        const newTask: Task = {
+          id: response.data.id, // Đảm bảo id luôn là string
+          title: response.data.title || title, // Dùng title từ input nếu API không trả về
+          status: response.data.status as Status,
+          isCompleted:
+            response.data.status === 'DONE' || response.data.status === TodoStatusType.DONE,
+          createdAt: new Date(response.data.createdAt),
+          note: response.data.note || notes || undefined,
         };
 
         // Cập nhật state cột với task mới, đảm bảo task được thêm vào đúng cột
@@ -512,13 +520,14 @@ function Dashboard() {
           })
         );
       } else {
-        toast.error('Failed to create task');
+        toast.error('Cannot create task: Missing data from API');
       }
-
-      // Reset form sau khi thêm thành công
-      setAddingTaskToColumnId(null);
     } catch (error) {
       console.error('Error adding task:', error);
+      toast.error('An error occurred while creating the task. Please try again later.');
+    } finally {
+      setIsLoading(false);
+      setAddingTaskToColumnId(null);
     }
   };
 
@@ -538,64 +547,68 @@ function Dashboard() {
       // Gọi API cập nhật task với dữ liệu đã được điều chỉnh
       const updatedTodo = await updateTodo(taskId, token, updateData);
 
-      if (updatedTodo) {
-        toast.success('Task updated successfully');
-        // Cập nhật lại state columns với task đã được cập nhật
-        setColumns((prevColumns) => {
-          // Tìm column chứa task cần cập nhật
-          const columnWithTask = prevColumns.find((column) =>
-            column.tasks.some((task) => task.id === taskId)
-          );
+      console.log('updatedTodo', updatedTodo);
 
-          if (!columnWithTask) return prevColumns;
-
-          // Tạo bản sao của task cần cập nhật
-          const taskToUpdate = { ...columnWithTask.tasks.find((task) => task.id === taskId)! };
-
-          // Cập nhật dữ liệu task
-          const updatedTask = { ...taskToUpdate, ...updateData };
-
-          // Nếu status thay đổi, di chuyển task giữa các column
-          if (updateData.status && updateData.status !== taskToUpdate.status) {
-            // Tìm column đích dựa trên status mới
-            const targetColumn = prevColumns.find((col) => col.title === updateData.status);
-
-            if (!targetColumn) return prevColumns;
-
-            return prevColumns.map((column) => {
-              // Xóa task khỏi column cũ
-              if (column.id === columnWithTask.id) {
-                return {
-                  ...column,
-                  tasks: column.tasks.filter((task) => task.id !== taskId),
-                };
-              }
-              // Thêm task vào column mới
-              if (column.id === targetColumn.id) {
-                return {
-                  ...column,
-                  tasks: [...column.tasks, updatedTask],
-                };
-              }
-              return column;
-            });
-          }
-
-          // Nếu status không thay đổi, chỉ cập nhật task
-          return prevColumns.map((column) => ({
-            ...column,
-            tasks: column.tasks.map((task) =>
-              task.id === taskId ? { ...task, ...updateData } : task
-            ),
-          }));
-        });
-      } else {
-        toast.error('Failed to updated task');
+      if (updatedTodo.errors) {
+        toast.error('Error updating task: ' + updatedTodo.errors.join(', '));
+        return;
       }
+
+      toast.success('Task updated successfully');
+      // Cập nhật lại state columns với task đã được cập nhật
+      setColumns((prevColumns) => {
+        // Tìm column chứa task cần cập nhật
+        const columnWithTask = prevColumns.find((column) =>
+          column.tasks.some((task) => task.id === taskId)
+        );
+
+        if (!columnWithTask) return prevColumns;
+
+        // Tạo bản sao của task cần cập nhật
+        const taskToUpdate = { ...columnWithTask.tasks.find((task) => task.id === taskId)! };
+
+        // Cập nhật dữ liệu task
+        const updatedTask = { ...taskToUpdate, ...updateData };
+
+        // Nếu status thay đổi, di chuyển task giữa các column
+        if (updateData.status && updateData.status !== taskToUpdate.status) {
+          // Tìm column đích dựa trên status mới
+          const targetColumn = prevColumns.find((col) => col.title === updateData.status);
+
+          if (!targetColumn) return prevColumns;
+
+          return prevColumns.map((column) => {
+            // Xóa task khỏi column cũ
+            if (column.id === columnWithTask.id) {
+              return {
+                ...column,
+                tasks: column.tasks.filter((task) => task.id !== taskId),
+              };
+            }
+            // Thêm task vào column mới
+            if (column.id === targetColumn.id) {
+              return {
+                ...column,
+                tasks: [...column.tasks, updatedTask],
+              };
+            }
+            return column;
+          });
+        }
+
+        // Nếu status không thay đổi, chỉ cập nhật task
+        return prevColumns.map((column) => ({
+          ...column,
+          tasks: column.tasks.map((task) =>
+            task.id === taskId ? { ...task, ...updateData } : task
+          ),
+        }));
+      });
 
       setEditingTaskId(null);
     } catch (error) {
       console.error('Error updating task:', error);
+      toast.error('An error occurred while updating the task. Please try again later.');
     }
   };
 
@@ -616,13 +629,13 @@ function Dashboard() {
             tasks: column.tasks.filter((task) => task.id !== taskId),
           }))
         );
-        toast.success('Tast deleted successfully');
+        toast.success('Task deleted successfully');
       } else {
-        console.warn('API trả về kết quả xóa không thành công');
-        toast.error('Failed to deleted task');
+        console.warn('API returned unsuccessful deletion result');
+        toast.error('An error occurred while deleting the task. Please try again later.');
       }
     } catch (error) {
-      console.error('Lỗi khi xóa task:', error);
+      console.error('Error deleting task:', error);
       // Vẫn xóa trên UI dù API lỗi để đồng bộ trạng thái
       setColumns((prev) =>
         prev.map((column) => ({
@@ -688,7 +701,7 @@ function Dashboard() {
         }))
       );
     } catch (error) {
-      console.error('Lỗi khi cập nhật trạng thái hoàn thành:', error);
+      console.error('Error updating completion status:', error);
       // Vẫn cập nhật UI dù API lỗi
     }
   };

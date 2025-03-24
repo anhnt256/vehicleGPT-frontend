@@ -1,10 +1,15 @@
+import { GraphQLResponse } from '@/types/graphql';
+
 /**
  * Deletes a Todo item using GraphQL mutation
  * @param id - The ID of the todo to delete
- * @param userRole - User role for token (free/paid)
- * @returns Promise with boolean indicating success
+ * @param token - Authentication token
+ * @returns Promise with result and any errors
  */
-export async function deleteTodo(id: string, token: string): Promise<boolean> {
+export async function deleteTodo(
+  id: string,
+  token: string
+): Promise<{ success?: boolean; errors?: string[] }> {
   const endpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql';
 
   // GraphQL mutation
@@ -29,11 +34,19 @@ export async function deleteTodo(id: string, token: string): Promise<boolean> {
     });
 
     // Parse the response
-    const result = await response.json();
+    const result = (await response.json()) as GraphQLResponse<boolean>;
 
-    return result.data?.deleteTodo === true;
+    // Handle errors
+    if (result.errors && result.errors.length > 0) {
+      const errorMessages = result.errors.map((err) =>
+        err.extensions?.details?.length ? err.extensions.details[0] : err.message
+      );
+      return { errors: errorMessages };
+    }
+
+    return { success: result.data?.deleteTodo === true };
   } catch (error) {
     console.error('Error deleting todo:', error);
-    throw error;
+    return { errors: [(error as Error).message] };
   }
 }

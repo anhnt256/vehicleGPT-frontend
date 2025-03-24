@@ -1,4 +1,5 @@
 import { Status, TodoStatus } from '@/types';
+import { GraphQLResponse } from '@/types/graphql';
 
 // Interface cho input của updateTodo
 interface UpdateTodoInput {
@@ -27,7 +28,7 @@ interface TodoResponse {
  * @param id - The ID of the todo to update
  * @param token - Authentication token
  * @param data - The data to update (title, status, completed, note)
- * @returns Promise with the updated todo data
+ * @returns Promise with the updated todo data and any errors
  */
 export async function updateTodo(
   id: string,
@@ -38,7 +39,7 @@ export async function updateTodo(
     isCompleted?: boolean;
     note?: string;
   }
-): Promise<TodoResponse> {
+): Promise<{ data?: TodoResponse; errors?: string[] }> {
   try {
     const endpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql';
 
@@ -104,14 +105,18 @@ export async function updateTodo(
       }),
     });
 
-    const result = await response.json();
-    // Kiểm tra lỗi UNAUTHENTICATED
-    if (
-      result.errors &&
-      result.errors.some(
-        (e: { extensions?: { code: string } }) => e.extensions?.code === 'UNAUTHENTICATED'
-      )
-    ) {
+    const result = (await response.json()) as GraphQLResponse<TodoResponse>;
+
+    // Handle GraphQL errors
+    if (result.errors && result.errors.length > 0) {
+      const errorMessages = result.errors.map((err) =>
+        err.extensions?.details?.length ? err.extensions.details[0] : err.message
+      );
+      return { errors: errorMessages };
+    }
+
+    // Handle UNAUTHENTICATED errors
+    if (result.errors && result.errors.some((e) => e.extensions?.code === 'UNAUTHENTICATED')) {
       console.error('Token không hợp lệ hoặc đã hết hạn');
 
       // Xóa token và các cookie liên quan
@@ -120,12 +125,12 @@ export async function updateTodo(
 
       // Chuyển hướng về trang chủ
       window.location.href = '/';
-      throw new Error('Unauthorized');
+      return { errors: ['Token không hợp lệ hoặc đã hết hạn'] };
     }
 
-    return result.data?.updateTodo || null;
+    return { data: result.data?.updateTodo };
   } catch (error) {
     console.error('Lỗi khi cập nhật todo:', error);
-    throw error;
+    return { errors: [(error as Error).message] };
   }
 }

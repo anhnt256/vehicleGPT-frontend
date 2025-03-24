@@ -17,7 +17,7 @@ interface AccordionStatusProps {
   isPaidUser: boolean;
   addingTaskToColumnId: string | null;
   setAddingTaskToColumnId: (id: string | null) => void;
-  handleAddTask: (columnId: string, title: string, status?: Status, notes?: string) => void;
+  handleAddTask: (columnId: string, title: string, notes?: string) => void;
   editingTaskId: string | null;
   setEditingTaskId: (id: string | null) => void;
   handleUpdateTask: (taskId: string, updatedData: Partial<Task>) => void;
@@ -110,8 +110,8 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
               {/* Add Task Form or Button */}
               {addingTaskToColumnId === column.id ? (
                 <AddTaskForm
-                  onAdd={(title, status, note) => {
-                    handleAddTask(column.id, title, status as Status, note);
+                  onAdd={(title, note) => {
+                    handleAddTask(column.id, title, note);
                   }}
                   onCancel={() => setAddingTaskToColumnId(null)}
                   defaultStatus={column.title}

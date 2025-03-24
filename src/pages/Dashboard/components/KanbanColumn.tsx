@@ -19,7 +19,7 @@ interface KanbanColumnProps {
   isPaidUser: boolean;
   addingTaskToColumnId: string | null;
   setAddingTaskToColumnId: (id: string | null) => void;
-  handleAddTask: (columnId: string, title: string, status?: Status, notes?: string) => void;
+  handleAddTask: (columnId: string, title: string, notes?: string) => void;
   handleUpdateColumn: (columnId: string, title: string) => void;
   handleDeleteColumn: (columnId: string) => void;
   editingColumnId: string | null;
@@ -192,7 +192,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
               {/* Add Task button or form */}
               {addingTaskToColumnId === column.id ? (
                 <AddTaskForm
-                  onAdd={(title, status, notes) => handleAddTask(column.id, title, status, notes)}
+                  onAdd={(title, notes) => handleAddTask(column.id, title, notes)}
                   onCancel={() => setAddingTaskToColumnId(null)}
                   defaultStatus={column.title}
                   isPaidUser={isPaidUser}

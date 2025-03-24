@@ -1,6 +1,7 @@
 import { LayoutType, Status, StatusColumn, Task, TodoStatus } from '@/types';
 import { useEffect, useState, useRef } from 'react';
 import { useLoaderData, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import KanbanColumn from './components/KanbanColumn';
 import AccordionStatus from './components/AccordionStatus';
 import {
@@ -480,34 +481,39 @@ function Dashboard() {
       // Tạo todo mới qua API
       const createdTodo = await createTodo(title, targetStatus as TodoStatus, authToken, note);
 
-      // Tìm ĐÚNG columnId dựa trên status thực tế của task vừa tạo
-      const correctColumnId =
-        columns.find((col) => col.title.toUpperCase() === createdTodo.status.toUpperCase())?.id ||
-        columnId;
+      if (createdTodo) {
+        toast.success('Task created successfully');
+        // Tìm ĐÚNG columnId dựa trên status thực tế của task vừa tạo
+        const correctColumnId =
+          columns.find((col) => col.title.toUpperCase() === createdTodo.status.toUpperCase())?.id ||
+          columnId;
 
-      // Tạo task mới dựa trên response từ API
-      const newTask = {
-        id: createdTodo.id,
-        title: createdTodo.title,
-        status: createdTodo.status as Status,
-        // Tự động đánh dấu completed = true nếu status là DONE
-        isCompleted: createdTodo.status === 'DONE' || createdTodo.status === TodoStatusType.DONE,
-        createdAt: new Date(createdTodo.createdAt),
-        note: createdTodo.note || note || undefined,
-      };
+        // Tạo task mới dựa trên response từ API
+        const newTask = {
+          id: createdTodo.id,
+          title: createdTodo.title,
+          status: createdTodo.status as Status,
+          // Tự động đánh dấu completed = true nếu status là DONE
+          isCompleted: createdTodo.status === 'DONE' || createdTodo.status === TodoStatusType.DONE,
+          createdAt: new Date(createdTodo.createdAt),
+          note: createdTodo.note || note || undefined,
+        };
 
-      // Cập nhật state cột với task mới, đảm bảo task được thêm vào đúng cột
-      setColumns((prev) =>
-        prev.map((col) => {
-          if (col.id === correctColumnId) {
-            return {
-              ...col,
-              tasks: [...col.tasks, newTask],
-            };
-          }
-          return col;
-        })
-      );
+        // Cập nhật state cột với task mới, đảm bảo task được thêm vào đúng cột
+        setColumns((prev) =>
+          prev.map((col) => {
+            if (col.id === correctColumnId) {
+              return {
+                ...col,
+                tasks: [...col.tasks, newTask],
+              };
+            }
+            return col;
+          })
+        );
+      } else {
+        toast.error('Failed to create task');
+      }
 
       // Reset form sau khi thêm thành công
       setAddingTaskToColumnId(null);
@@ -530,57 +536,62 @@ function Dashboard() {
       }
 
       // Gọi API cập nhật task với dữ liệu đã được điều chỉnh
-      await updateTodo(taskId, token, updateData);
+      const updatedTodo = await updateTodo(taskId, token, updateData);
 
-      // Cập nhật lại state columns với task đã được cập nhật
-      setColumns((prevColumns) => {
-        // Tìm column chứa task cần cập nhật
-        const columnWithTask = prevColumns.find((column) =>
-          column.tasks.some((task) => task.id === taskId)
-        );
+      if (updatedTodo) {
+        toast.success('Task updated successfully');
+        // Cập nhật lại state columns với task đã được cập nhật
+        setColumns((prevColumns) => {
+          // Tìm column chứa task cần cập nhật
+          const columnWithTask = prevColumns.find((column) =>
+            column.tasks.some((task) => task.id === taskId)
+          );
 
-        if (!columnWithTask) return prevColumns;
+          if (!columnWithTask) return prevColumns;
 
-        // Tạo bản sao của task cần cập nhật
-        const taskToUpdate = { ...columnWithTask.tasks.find((task) => task.id === taskId)! };
+          // Tạo bản sao của task cần cập nhật
+          const taskToUpdate = { ...columnWithTask.tasks.find((task) => task.id === taskId)! };
 
-        // Cập nhật dữ liệu task
-        const updatedTask = { ...taskToUpdate, ...updateData };
+          // Cập nhật dữ liệu task
+          const updatedTask = { ...taskToUpdate, ...updateData };
 
-        // Nếu status thay đổi, di chuyển task giữa các column
-        if (updateData.status && updateData.status !== taskToUpdate.status) {
-          // Tìm column đích dựa trên status mới
-          const targetColumn = prevColumns.find((col) => col.title === updateData.status);
+          // Nếu status thay đổi, di chuyển task giữa các column
+          if (updateData.status && updateData.status !== taskToUpdate.status) {
+            // Tìm column đích dựa trên status mới
+            const targetColumn = prevColumns.find((col) => col.title === updateData.status);
 
-          if (!targetColumn) return prevColumns;
+            if (!targetColumn) return prevColumns;
 
-          return prevColumns.map((column) => {
-            // Xóa task khỏi column cũ
-            if (column.id === columnWithTask.id) {
-              return {
-                ...column,
-                tasks: column.tasks.filter((task) => task.id !== taskId),
-              };
-            }
-            // Thêm task vào column mới
-            if (column.id === targetColumn.id) {
-              return {
-                ...column,
-                tasks: [...column.tasks, updatedTask],
-              };
-            }
-            return column;
-          });
-        }
+            return prevColumns.map((column) => {
+              // Xóa task khỏi column cũ
+              if (column.id === columnWithTask.id) {
+                return {
+                  ...column,
+                  tasks: column.tasks.filter((task) => task.id !== taskId),
+                };
+              }
+              // Thêm task vào column mới
+              if (column.id === targetColumn.id) {
+                return {
+                  ...column,
+                  tasks: [...column.tasks, updatedTask],
+                };
+              }
+              return column;
+            });
+          }
 
-        // Nếu status không thay đổi, chỉ cập nhật task
-        return prevColumns.map((column) => ({
-          ...column,
-          tasks: column.tasks.map((task) =>
-            task.id === taskId ? { ...task, ...updateData } : task
-          ),
-        }));
-      });
+          // Nếu status không thay đổi, chỉ cập nhật task
+          return prevColumns.map((column) => ({
+            ...column,
+            tasks: column.tasks.map((task) =>
+              task.id === taskId ? { ...task, ...updateData } : task
+            ),
+          }));
+        });
+      } else {
+        toast.error('Failed to updated task');
+      }
 
       setEditingTaskId(null);
     } catch (error) {
@@ -605,15 +616,10 @@ function Dashboard() {
             tasks: column.tasks.filter((task) => task.id !== taskId),
           }))
         );
+        toast.success('Tast deleted successfully');
       } else {
         console.warn('API trả về kết quả xóa không thành công');
-        // Vẫn xóa trên UI để đồng bộ trạng thái
-        setColumns((prev) =>
-          prev.map((column) => ({
-            ...column,
-            tasks: column.tasks.filter((task) => task.id !== taskId),
-          }))
-        );
+        toast.error('Failed to deleted task');
       }
     } catch (error) {
       console.error('Lỗi khi xóa task:', error);
@@ -779,34 +785,28 @@ function Dashboard() {
                   </div>
                 ) : (
                   <div className="w-full p-2 sm:p-4">
-                    <SortableContext
-                      items={columns.map((col) => col.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {columns.map((column) => (
-                        <AccordionStatus
-                          key={column.id}
-                          column={column}
-                          isPaidUser={isPaidUser}
-                          addingTaskToColumnId={addingTaskToColumnId}
-                          setAddingTaskToColumnId={setAddingTaskToColumnId}
-                          handleAddTask={handleAddTask}
-                          editingTaskId={editingTaskId}
-                          setEditingTaskId={setEditingTaskId}
-                          handleUpdateTask={handleUpdateTask}
-                          handleDeleteTask={handleDeleteTask}
-                          handleToggleCompleted={handleToggleCompleted}
-                          handleUpdateColumn={handleUpdateColumn}
-                          handleDeleteColumn={handleDeleteColumn}
-                          activeOptionsTaskId={activeOptionsTaskId}
-                          setActiveOptionsTaskId={setActiveOptionsTaskId}
-                          activeOptionsColumnId={activeOptionsColumnId}
-                          setActiveOptionsColumnId={setActiveOptionsColumnId}
-                          draggingTaskId={draggingTaskId}
-                          statusOptions={allStatuses}
-                        />
-                      ))}
-                    </SortableContext>
+                    {columns.map((column) => (
+                      <AccordionStatus
+                        key={column.id}
+                        column={column}
+                        isPaidUser={isPaidUser}
+                        addingTaskToColumnId={addingTaskToColumnId}
+                        setAddingTaskToColumnId={setAddingTaskToColumnId}
+                        handleAddTask={handleAddTask}
+                        editingTaskId={editingTaskId}
+                        setEditingTaskId={setEditingTaskId}
+                        handleUpdateTask={handleUpdateTask}
+                        handleDeleteTask={handleDeleteTask}
+                        handleToggleCompleted={handleToggleCompleted}
+                        handleUpdateColumn={handleUpdateColumn}
+                        handleDeleteColumn={handleDeleteColumn}
+                        activeOptionsTaskId={activeOptionsTaskId}
+                        setActiveOptionsTaskId={setActiveOptionsTaskId}
+                        activeOptionsColumnId={activeOptionsColumnId}
+                        setActiveOptionsColumnId={setActiveOptionsColumnId}
+                        statusOptions={allStatuses}
+                      />
+                    ))}
                   </div>
                 )}
 

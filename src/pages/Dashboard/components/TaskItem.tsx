@@ -117,11 +117,13 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setActiveOptionsTaskId(null);
     setShowEditDialog(true);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setActiveOptionsTaskId(null);
     setShowDeleteDialog(true);
   };
 
@@ -163,7 +165,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
               <span
                 className={`${
                   task.isCompleted ? 'line-through text-gray-500' : 'text-gray-200'
-                } text-sm sm:text-base break-words`}
+                } text-sm sm:text-base break-words truncate overflow-hidden whitespace-nowrap`}
               >
                 {task.title}
               </span>
@@ -190,7 +192,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 </button>
 
                 {showOptions && (
-                  <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 z-50 min-w-40 border border-gray-700">
+                  <div className="absolute z-[9999] right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 min-w-40 border border-gray-700">
                     <button
                       className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700"
                       onClick={handleEditClick}
@@ -259,6 +261,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
               <input
                 type="text"
                 value={editTitle}
+                maxLength={50}
                 onChange={(e) => setEditTitle(e.target.value)}
                 className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
                 autoFocus

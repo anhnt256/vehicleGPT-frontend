@@ -113,20 +113,11 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
   const totalTasks = column.tasks.length;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="mb-4 bg-gray-800 rounded-lg overflow-hidden w-full"
-    >
+    <div ref={setNodeRef} style={style} className="mb-4 bg-gray-800 rounded-lg w-full">
       <div className="p-3 sm:p-4 bg-gray-700 flex items-center">
         {/* Toggle icon */}
         <div className="cursor-pointer mr-2 flex-shrink-0" onClick={handleHeaderClick}>
           {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-        </div>
-
-        {/* Grip icon */}
-        <div className="cursor-grab mr-2 flex-shrink-0" {...listeners} {...attributes}>
-          <GripVertical size={20} className="text-gray-500" />
         </div>
 
         {/* Title */}
@@ -146,44 +137,6 @@ const AccordionStatus: React.FC<AccordionStatusProps> = ({
             </span>
           </div>
         )}
-
-        {/* Options menu - căn phải */}
-        <div className="relative ml-auto flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-          <button
-            className="text-gray-400 hover:text-white p-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (showOptions) {
-                setActiveOptionsColumnId(null);
-              } else {
-                setActiveOptionsTaskId(null);
-                setActiveOptionsColumnId(column.id);
-              }
-            }}
-          >
-            <MoreHorizontal size={20} />
-          </button>
-
-          {showOptions && (
-            <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 z-50 min-w-40 border border-gray-700">
-              <button
-                className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700"
-                onClick={handleEditClick}
-              >
-                <Pencil size={14} />
-                <span>Edit Column</span>
-              </button>
-              <div className="border-t border-gray-700 my-1"></div>
-              <button
-                className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-gray-700"
-                onClick={handleDeleteClick}
-              >
-                <Trash size={14} />
-                <span>Delete Column</span>
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Phần nội dung của accordion */}

@@ -28,12 +28,12 @@ const LandingPage = () => {
           </div>
           <div className="flex items-center space-x-4">
             <SignedOut>
-              <SignInButton mode="modal">
+              <SignInButton mode="modal" redirectUrl="/dashboard">
                 <button className="text-gray-700 hover:text-indigo-600 px-3 py-2 text-sm font-medium">
                   Sign In
                 </button>
               </SignInButton>
-              <SignUpButton mode="modal">
+              <SignUpButton mode="modal" redirectUrl="/dashboard">
                 <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all">
                   Get Started
                 </button>

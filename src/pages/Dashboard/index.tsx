@@ -458,8 +458,6 @@ function Dashboard() {
     if (!title.trim()) return;
 
     try {
-      setIsLoading(true);
-
       // Lấy token từ cookie
       const token = getAuthTokenFromCookie();
 
@@ -509,7 +507,6 @@ function Dashboard() {
       console.error('Error adding task:', error);
       toast.error('Failed to add task. Please try again.');
     } finally {
-      setIsLoading(false);
       setAddingTaskToColumnId(null);
     }
   };

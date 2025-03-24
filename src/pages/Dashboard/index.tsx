@@ -1,6 +1,6 @@
 import { LayoutType, Status, StatusColumn, Task } from '@/types';
 import { useEffect, useState, useRef } from 'react';
-import { useLoaderData, useNavigate } from 'react-router-dom';
+import { useLoaderData, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import KanbanColumn from './components/KanbanColumn';
 import AccordionStatus from './components/AccordionStatus';
@@ -89,12 +89,13 @@ function Dashboard() {
   useDocumentTitle('Dashboard | Super Todo is super tool with AI');
   const { userRole } = useLoaderData();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [columns, setColumns] = useState<StatusColumn[]>(initialColumns);
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
   const [addingTaskToColumnId, setAddingTaskToColumnId] = useState<string | null>(null);
-  const [layoutType, setLayoutType] = useState<LayoutType>('list');
+  const [layout, setLayout] = useState<LayoutType>(searchParams.get('view') || 'list');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [activeOptionsTaskId, setActiveOptionsTaskId] = useState<string | null>(null);
@@ -693,6 +694,26 @@ function Dashboard() {
 
   const isPaidUser = userRole === 'paid';
 
+  // Cập nhật URL khi layout thay đổi
+  useEffect(() => {
+    // Lấy các query params hiện tại
+    const params = new URLSearchParams(searchParams);
+
+    // Cập nhật param 'view'
+    params.set('view', layout);
+
+    // Cập nhật URL không làm mới trang
+    navigate(`?${params.toString()}`, { replace: true });
+  }, [layout, navigate, searchParams]);
+
+  // Hàm chuyển đổi layout
+  const toggleLayout = () => {
+    const newLayout = layout === 'kanban' ? 'list' : 'kanban';
+    setLayout(newLayout);
+    // URL sẽ được cập nhật thông qua useEffect
+    toast.success(`Switched to ${newLayout} view`);
+  };
+
   return (
     <>
       <div className="flex-1 overflow-auto">
@@ -703,9 +724,9 @@ function Dashboard() {
               <div className="flex items-center gap-3">
                 {/* Nút List luôn hiển thị cho tất cả người dùng */}
                 <button
-                  onClick={() => setLayoutType('list')}
+                  onClick={() => setLayout('list')}
                   className={`px-5 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                    layoutType === 'list'
+                    layout === 'list'
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
                   }`}
@@ -716,9 +737,9 @@ function Dashboard() {
                 {/* Chỉ hiển thị nút Kanban cho người dùng có subscription paid */}
                 {userRole === 'paid' && (
                   <button
-                    onClick={() => setLayoutType('kanban')}
+                    onClick={() => setLayout('kanban')}
                     className={`px-5 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                      layoutType === 'kanban'
+                      layout === 'kanban'
                         ? 'bg-indigo-600 text-white'
                         : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
                     }`}
@@ -748,7 +769,7 @@ function Dashboard() {
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
-                {layoutType === 'kanban' && userRole === 'paid' ? (
+                {layout === 'kanban' && userRole === 'paid' ? (
                   <div className="flex gap-2 overflow-x-auto pb-4 min-h-[calc(100vh-120px)] p-2 sm:p-4">
                     <SortableContext
                       items={columns.map((col) => col.id)}

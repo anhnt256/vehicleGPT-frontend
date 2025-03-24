@@ -95,7 +95,9 @@ function Dashboard() {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
   const [addingTaskToColumnId, setAddingTaskToColumnId] = useState<string | null>(null);
-  const [layout, setLayout] = useState<LayoutType>(searchParams.get('view') || 'list');
+  const [layout, setLayout] = useState<LayoutType>(
+    (searchParams.get('view') as LayoutType) || 'list'
+  );
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [activeOptionsTaskId, setActiveOptionsTaskId] = useState<string | null>(null);
@@ -705,14 +707,6 @@ function Dashboard() {
     // Cập nhật URL không làm mới trang
     navigate(`?${params.toString()}`, { replace: true });
   }, [layout, navigate, searchParams]);
-
-  // Hàm chuyển đổi layout
-  const toggleLayout = () => {
-    const newLayout = layout === 'kanban' ? 'list' : 'kanban';
-    setLayout(newLayout);
-    // URL sẽ được cập nhật thông qua useEffect
-    toast.success(`Switched to ${newLayout} view`);
-  };
 
   return (
     <>

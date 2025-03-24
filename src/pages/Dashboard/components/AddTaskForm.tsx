@@ -4,7 +4,7 @@ import { Status, TodoStatus } from '@/types';
 import { allStatuses } from '@/utils/constants';
 
 interface AddTaskFormProps {
-  onAdd: (title: string, status?: Status, note?: string) => void;
+  onAdd: (title: string, note?: string) => void;
   onCancel: () => void;
   defaultStatus?: Status;
   isPaidUser?: boolean;
@@ -26,7 +26,7 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({
     e.preventDefault();
     if (title.trim()) {
       console.log('AddTaskForm - onAdd được gọi với:', title, status, note);
-      onAdd(title.trim(), status, isPaidUser ? note.trim() || undefined : undefined);
+      onAdd(title.trim(), isPaidUser ? note.trim() || undefined : undefined);
       setTitle('');
       setNote('');
     }

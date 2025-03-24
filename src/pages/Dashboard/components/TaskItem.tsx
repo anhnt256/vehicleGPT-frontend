@@ -5,13 +5,10 @@ import {
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
-  GripVertical,
   Pencil,
   Trash,
 } from 'lucide-react';
 import { Status, Task } from '@/types';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
   Dialog,
   DialogContent,
@@ -66,25 +63,6 @@ const TaskItem: React.FC<TaskItemProps> = ({
       setEditStatus(task.status);
     }
   }, [task, showEditDialog, editingTaskId]);
-
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: task.id,
-    data: {
-      type: 'task',
-      task,
-    },
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0 : 1,
-    zIndex: isDragging ? 999 : 'auto',
-  };
-
-  const toggleNotes = () => {
-    setShowNotes(!showNotes);
-  };
 
   // Handlers for Save and Delete operations
   const handleSaveTask = () => {

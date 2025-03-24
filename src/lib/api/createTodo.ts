@@ -90,13 +90,8 @@ export async function createTodo(
     // Parse the response
     const result = await response.json();
 
-    // Check for errors
-    if (result.errors) {
-      throw new Error(result.errors[0].message);
-    }
-
     // Return the created todo
-    return result.data.createTodo;
+    return result.data?.createTodo;
   } catch (error) {
     console.error('Error creating todo:', error);
     throw error;

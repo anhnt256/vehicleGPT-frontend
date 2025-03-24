@@ -123,11 +123,7 @@ export async function updateTodo(
       throw new Error('Unauthorized');
     }
 
-    if (result.errors) {
-      throw new Error(result.errors[0].message);
-    }
-
-    return result.data.updateTodo;
+    return result.data?.updateTodo || null;
   } catch (error) {
     console.error('Lỗi khi cập nhật todo:', error);
     throw error;

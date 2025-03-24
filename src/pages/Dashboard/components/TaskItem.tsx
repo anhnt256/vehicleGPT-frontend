@@ -142,99 +142,134 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
   return (
     <>
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...attributes}
-        className="flex flex-col bg-gray-800 rounded-md p-1.5 sm:p-2 border border-gray-700 hover:border-gray-500 w-full gap-1.5"
-      >
+      <div className="w-full bg-gray-800 hover:bg-gray-750 rounded-md p-3 relative group">
         <div className="flex items-start gap-2">
-          <div className="cursor-move self-center" {...listeners}>
-            <GripVertical size={14} className="text-gray-500" />
+          {/* Left side with checkbox and drag handle */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="cursor-move text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="9" cy="5" r="1" />
+                <circle cx="9" cy="12" r="1" />
+                <circle cx="9" cy="19" r="1" />
+                <circle cx="15" cy="5" r="1" />
+                <circle cx="15" cy="12" r="1" />
+                <circle cx="15" cy="19" r="1" />
+              </svg>
+            </div>
+            <button
+              onClick={handleToggleTask}
+              className="flex-shrink-0 text-gray-400 hover:text-white"
+            >
+              {task.isCompleted ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <Circle className="h-5 w-5" />
+              )}
+            </button>
           </div>
 
-          <div className="flex items-start justify-between gap-2 w-full">
-            <div className="flex items-start gap-2 min-w-0 flex-1">
-              <button onClick={handleToggleTask} className="flex-shrink-0 mt-0.5">
-                {task.isCompleted ? (
-                  <CheckCircle size={16} className="text-green-500" />
-                ) : (
-                  <Circle size={16} className="text-gray-400" />
-                )}
-              </button>
-              <span
-                className={`${
-                  task.isCompleted ? 'line-through text-gray-500' : 'text-gray-200'
-                } text-sm sm:text-base break-words truncate overflow-hidden whitespace-nowrap`}
-              >
-                {task.title}
-              </span>
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
+            {/* Title */}
+            <div
+              className={`${
+                task.isCompleted ? 'line-through text-gray-500' : 'text-gray-200'
+              } text-sm font-medium overflow-hidden whitespace-nowrap text-ellipsis`}
+              title={task.title}
+            >
+              {task.title}
             </div>
-            <div className="flex flex-col items-end gap-1 flex-shrink-0">
-              <span className="text-xs text-gray-500">{task.createdAt.toLocaleDateString()}</span>
-              <div className="relative z-10">
+
+            {/* Date */}
+            <div className="text-xs text-gray-500 mt-1">
+              {task.createdAt.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'numeric',
+                day: 'numeric',
+              })}
+            </div>
+
+            {/* Notes section */}
+            {isPaidUser && task.note && (
+              <div className="mt-1.5">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Thay đổi logic hiển thị options
-                    if (showOptions) {
-                      setActiveOptionsTaskId(null);
-                    } else {
-                      // Đóng menu của column nếu đang mở
-                      setActiveOptionsColumnId(null);
-                      // Mở menu của task
-                      setActiveOptionsTaskId(task.id);
-                    }
-                  }}
-                  className="p-1 text-gray-400 hover:text-white"
+                  type="button"
+                  className="flex items-center text-xs text-gray-400 hover:text-gray-300"
+                  onClick={() => setShowNotes(!showNotes)}
                 >
-                  <MoreHorizontal size={16} />
+                  {showNotes ? (
+                    <ChevronDown size={12} className="mr-1 flex-shrink-0" />
+                  ) : (
+                    <ChevronRight size={12} className="mr-1 flex-shrink-0" />
+                  )}
+                  <span>Notes</span>
                 </button>
 
-                {showOptions && (
-                  <div className="absolute z-[9999] right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 min-w-40 border border-gray-700">
-                    <button
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700"
-                      onClick={handleEditClick}
+                {showNotes && (
+                  <div className="mt-1 text-xs text-gray-400 pl-4 border-l border-gray-700 pr-2">
+                    <div
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                      title={task.note}
                     >
-                      <Pencil size={14} />
-                      <span>Edit Task</span>
-                    </button>
-                    <button
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm text-red-400 hover:bg-gray-700"
-                      onClick={handleDeleteClick}
-                    >
-                      <Trash size={14} />
-                      <span>Delete Task</span>
-                    </button>
+                      {task.note}
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
-        </div>
 
-        {isPaidUser && task.note && (
-          <div className="mt-1 pl-5">
+          {/* Right side with date and options */}
+          <div className="absolute right-3 top-3">
             <button
-              type="button"
-              className="flex items-center text-xs text-gray-400 hover:text-gray-300 w-full py-0.5"
-              onClick={toggleNotes}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (showOptions) {
+                  setActiveOptionsTaskId(null);
+                } else {
+                  setActiveOptionsColumnId(null);
+                  setActiveOptionsTaskId(task.id);
+                }
+              }}
+              className="p-1 text-gray-400 hover:text-white"
             >
-              {showNotes ? (
-                <ChevronDown size={10} className="mr-1 flex-shrink-0" />
-              ) : (
-                <ChevronRight size={10} className="mr-1 flex-shrink-0" />
-              )}
-              <span className="whitespace-nowrap">Notes</span>
+              <MoreHorizontal size={16} />
             </button>
-            {showNotes && (
-              <div className="mt-0.5 text-xs text-gray-400 pl-3 border-l border-gray-700 overflow-x-auto">
-                {task.note}
+
+            {showOptions && (
+              <div className="absolute z-[9999] right-0 top-full mt-1 bg-gray-800 rounded shadow-lg py-1 min-w-40 border border-gray-700">
+                <button
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm text-gray-300 hover:bg-gray-700"
+                  onClick={handleEditClick}
+                >
+                  <Pencil size={14} />
+                  <span>Edit Task</span>
+                </button>
+                <button
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm text-red-400 hover:bg-gray-700"
+                  onClick={handleDeleteClick}
+                >
+                  <Trash size={14} />
+                  <span>Delete Task</span>
+                </button>
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Edit Dialog */}

@@ -71,13 +71,8 @@ export async function getTodos(): Promise<Task[]> {
     // Parse the response
     const result = await response.json();
 
-    // Check for errors
-    if (result.errors) {
-      throw new Error(result.errors[0].message);
-    }
-
     // Map API response to Task objects
-    const todos = result.data.todos as TodoResponse[];
+    const todos = result.data?.todos as TodoResponse[];
 
     return todos.map((todo) => ({
       id: todo.id,

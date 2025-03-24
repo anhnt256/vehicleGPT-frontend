@@ -31,13 +31,7 @@ export async function deleteTodo(id: string, token: string): Promise<boolean> {
     // Parse the response
     const result = await response.json();
 
-    // Check for errors
-    if (result.errors) {
-      throw new Error(result.errors[0].message);
-    }
-
-    // Return success status
-    return result.data.deleteTodo === true;
+    return result.data?.deleteTodo === true;
   } catch (error) {
     console.error('Error deleting todo:', error);
     throw error;

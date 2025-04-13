@@ -14,7 +14,7 @@ function AppContent() {
   return (
     <AuthWrapper>
       <AppRoutes />
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" />
     </AuthWrapper>
   );
 }

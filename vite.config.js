@@ -5,11 +5,27 @@ import path from 'path';
 export default defineConfig({
     plugins: [react()],
     server: {
-        port: 3000
+        port: 3000,
+        host: true,
+    },
+    preview: {
+        port: 3000,
+        host: true,
+    },
+    build: {
+        outDir: 'dist',
+        sourcemap: true,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['react', 'react-dom', 'react-router-dom'],
+                },
+            },
+        },
     },
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src')
-        }
-    }
+            '@': path.resolve(__dirname, './src'),
+        },
+    },
 });

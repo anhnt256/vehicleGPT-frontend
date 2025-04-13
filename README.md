@@ -1,168 +1,119 @@
-# SuperTodo - Advanced Task Management Application
+# ChatGPT Assistant Application
 
-SuperTodo is a modern task management application featuring a Kanban interface, drag-and-drop functionality, and numerous advanced features.
+A modern web-based chat application that allows users to interact with an AI assistant powered by GPT technology.
 
-## Setup Instructions
+## 🌟 Features | Tính năng
 
-### Requirements
+- Real-time chat interface with AI assistant | Giao diện chat thời gian thực với trợ lý AI
+- Beautiful and responsive UI design | Thiết kế UI đẹp và tương thích đa thiết bị
+- Secure authentication with Clerk | Xác thực bảo mật với Clerk
+- Markdown support for rich text formatting | Hỗ trợ Markdown để định dạng văn bản
+- Code syntax highlighting | Tô sáng cú pháp code
+- Error handling and loading states | Xử lý lỗi và trạng thái loading
 
-- Node.js (v18 or higher)
-- pnpm/npm/yarn
+## 🚀 Technologies Used | Công nghệ sử dụng
 
-### Installation Steps
+- React + TypeScript
+- Vite
+- TailwindCSS
+- Clerk Authentication
+- React Query
+- Axios
+- React Markdown
+- Sonner (Toast notifications)
 
-1. **Clone repository**
+## 📦 Installation | Cài đặt
 
-   ```bash
-   git clone https://github.com/yourusername/super-todo.git
-   cd super-todo
-   ```
+1. Clone the repository | Clone dự án
 
-2. **Install dependencies**
+```bash
+git clone <repository-url>
+cd <project-directory>
+```
 
-   ```bash
-   pnpm install
-   # Or
-   npm install
-   ```
+2. Install dependencies | Cài đặt dependencies
 
-3. **Configure environment variables**
+```bash
+npm install
+```
 
-   - Create a `.env` file based on `.env.example`
-   - Update the necessary keys:
+3. Create `.env` file and add required environment variables | Tạo file `.env` và thêm các biến môi trường
 
-     ```
-     VITE_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_key
-     CLERK_SIGN_IN_FORCE_REDIRECT_URL='/dashboard'
-     CLERK_SIGN_UP_FORCE_REDIRECT_URL='/dashboard'
-     VITE_GRAPHQL_ENDPOINT=http://localhost:4000/graphql
-     VITE_API_ENDPOINT=http://localhost:4000
+```env
+VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
+VITE_API_URL=your_api_url
+```
 
-     # Authentication
-     JWT_SECRET=your_jwt_secret
-     JWT_EXPIRES_IN=1d
-     ```
+4. Start development server | Khởi chạy môi trường development
 
-4. **Start development server**
+```bash
+npm run dev
+```
 
-   ```bash
-   pnpm dev
-   # Or
-   npm run dev
-   ```
+## 🔧 Configuration | Cấu hình
 
-5. **Build for production**
-   ```bash
-   pnpm build
-   # Or
-   npm run build
-   ```
+The project uses Vite as the build tool with the following configuration:
 
-## Architecture Decisions
+- Port: 3000
+- Allowed hosts: verhicle.up.railway.app
+- Path aliases: '@' points to './src'
 
-### Frontend
+## 📁 Project Structure | Cấu trúc dự án
 
-- **React + TypeScript**: Ensures type-safety and better development experience
-- **React Router**: Manages routing and protects authenticated routes
-- **Clerk**: Modern authentication solution with user and session management
-- **GraphQL**: Used for the main API, optimizing payloads and requests
-- **REST API**: Used for specific separate endpoints
-- **dnd-kit**: High-performance drag-and-drop library for the Kanban experience
-- **Context API**: Global state management for authentication
-- **Sonner**: Modern toast notifications
-- **Tailwind CSS**: Flexible and efficient styling
+```
+src/
+├── components/         # Reusable components
+│   └── chat/          # Chat-specific components
+├── hooks/             # Custom React hooks
+├── lib/              # Utility functions
+├── pages/            # Page components
+│   └── Dashboard/    # Dashboard and chat interface
+├── services/         # API services
+└── styles/          # Global styles
+```
 
-### State Management
+## 🔒 Authentication | Xác thực
 
-- **Local State**: Using `useState` for component state
-- **Global State**: Context API for auth state and user role
-- **API Integration**: Custom hooks for API interaction
+The application uses Clerk for authentication. Users need to:
 
-### Authentication & Authorization
+1. Sign up/Sign in using Clerk
+2. Authentication token is automatically managed
+3. All API requests include the auth token in headers
 
-- **Clerk + JWT**: Using Clerk for authentication and passing JWT tokens to the backend
-- **Cookie-based**: Storing tokens and roles in cookies instead of localStorage
-- **Role-based Access**: Distinguishing free/paid users and limiting features
+## 💬 Chat Features | Tính năng chat
 
-## Assumptions & Notes
+- Real-time message sending and receiving
+- Support for markdown formatting
+- Code block syntax highlighting
+- Loading states and error handling
+- Message history preservation
+- Clean and intuitive UI
 
-### User Interface
+## 🌐 API Integration | Tích hợp API
 
-- **Responsive Design**: Works on both mobile and desktop devices
-- **Light/Dark Mode**: Default is dark mode, suitable for productivity applications
+The application connects to a backend API with:
 
-### User Roles
+- Base URL: verhicle.up.railway.app
+- Endpoints:
+  - POST /chat/sendMessages: Send messages to AI
+  - GET /initData: Initialize user data
 
-- **Free User**: Can use the List view and basic features
-- **Paid User**: Unlocks Kanban view, Notes, and Organizations features
+## 🤝 Contributing | Đóng góp
 
-### API Integration
+Feel free to:
 
-- Backend GraphQL runs at the address configured in `VITE_GRAPHQL_ENDPOINT`
-- Backend REST API runs at the address configured in `VITE_API_ENDPOINT`
-- JWT tokens are stored in cookies and automatically sent with each request
+1. Fork the project
+2. Create a feature branch
+3. Submit a pull request
 
-### Task Statuses
+## 📄 License | Giấy phép
 
-- Main statuses: TODO, IN_PROGRESS, BLOCKED, REVIEW, DONE, CANCELED
-- Tasks are automatically marked as Completed when moved to DONE status
+MIT License
 
-### Browser Support
+## 🆘 Support | Hỗ trợ
 
-- Supports modern browsers: Chrome, Firefox, Safari, Edge
-- Requires JavaScript to be enabled
-
-### Future Development
-
-- Time tracking features
-- AI integration for automatic task classification and suggestions
-- Integration with third-party services: Google Calendar, Microsoft Teams, Slack
-
-### Development Notes
-
-- Using ESLint and Prettier for code quality
-- Following naming conventions and folder organization
-- Ensuring complete type checking when developing with TypeScript
-
-## Additional Architectural Considerations
-
-### Project Architecture Evolution
-
-- **NextJS for Small Projects**: For smaller todo applications, using NextJS would be optimal as it handles both FE and BE in a single codebase, reducing complexity and development time.
-- **Separate FE/BE for Scalability**: As the project grows into something more feature-rich like ClickUp, separating frontend and backend becomes necessary for better maintainability and scalability.
-
-### Technology Selection Flexibility
-
-- **React vs Vue vs LynxJS**: While we've chosen React for this implementation, Vue could be an alternative for easier onboarding. For cross-platform needs, ByteDance's LynxJS would provide the advantage of supporting iOS and Android from a single codebase.
-- **Progressive Enhancement**: Our architecture allows for transitioning between technologies as the project requirements evolve.
-
-### State Management Scaling
-
-- **Context API for Small to Medium Apps**: Currently using Context API which adequately covers our needs while avoiding "context hell" through careful design.
-- **Redux for Complex State**: For larger applications with more complex state requirements, we should consider migrating to Redux for more robust state management.
-
-### Expansion Opportunities
-
-- **Team Collaboration**: Adding member invitation system and team management features
-- **Organization Structure**: Implementing organization hierarchy to manage different workspaces (Work, Personal, Departments)
-- **Custom Workflows**: Allowing users to define custom statuses and workflows for different projects
-- **Integration Ecosystem**: Building an API for third-party integrations and plugins
-
-## Troubleshooting
-
-### Authentication Issues
-
-- Ensure CLERK_PUBLISHABLE_KEY is configured correctly
-- Check permissions and domains in your Clerk dashboard
-
-### API Issues
-
-- Verify the backend server is running
-- Confirm GraphQL and API endpoints are configured correctly
-
-### UI Issues
-
-- Clear cache and cookies if experiencing layout problems
-- Check browser console for JavaScript errors
+For support, please create an issue in the repository or contact the development team.
 
 ---
+
+Made with ❤️ by the development team

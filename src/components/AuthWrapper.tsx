@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { useInitData } from '@/hooks/useInitData';
 
@@ -7,8 +6,8 @@ interface AuthWrapperProps {
 }
 
 export const AuthWrapper = ({ children }: AuthWrapperProps) => {
-  const { isSignedIn, isLoaded } = useAuth();
-  const { data, loading, error } = useInitData();
+  const { isLoaded } = useAuth();
+  const { loading, error } = useInitData();
 
   if (!isLoaded) {
     return (

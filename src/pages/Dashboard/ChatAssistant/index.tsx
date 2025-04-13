@@ -1,6 +1,9 @@
 import { ChatBox } from '@/components/chat/ChatBox';
+import { useChat } from '@/hooks/useChat';
 
 export const ChatAssistant = () => {
+  const { messages, isLoading, sendMessage } = useChat();
+
   return (
     <div className="h-full p-4">
       <div className="h-full flex flex-col">
@@ -9,7 +12,7 @@ export const ChatAssistant = () => {
           <p className="text-muted-foreground">Ask me anything</p>
         </div>
         <div className="flex-1">
-          <ChatBox />
+          <ChatBox onSendMessage={sendMessage} isLoading={isLoading} />
         </div>
       </div>
     </div>

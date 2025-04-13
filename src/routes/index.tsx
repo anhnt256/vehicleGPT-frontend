@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/layout/Dashboard/Layout';
 import { ChatAssistant } from '@/pages/Dashboard/ChatAssistant';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
+import { AuthWrapper } from '@/components/AuthWrapper';
 
 function LandingPageWrapper() {
   const { isSignedIn } = useAuth();
@@ -24,11 +25,13 @@ const router = createBrowserRouter([
   {
     path: '/dashboard',
     element: (
-      <PrivateRoute>
-        <DashboardLayout>
-          <Outlet />
-        </DashboardLayout>
-      </PrivateRoute>
+      <AuthWrapper>
+        <PrivateRoute>
+          <DashboardLayout>
+            <Outlet />
+          </DashboardLayout>
+        </PrivateRoute>
+      </AuthWrapper>
     ),
     children: [
       {

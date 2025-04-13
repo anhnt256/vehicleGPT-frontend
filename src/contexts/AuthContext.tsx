@@ -56,7 +56,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Nếu có user, đảm bảo token được lưu
     if (user) {
       console.log('User logged in:', user.primaryEmailAddress?.emailAddress);
-      getToken().then((token) => {
+      getToken({
+        template: 'SuperTodo',
+      }).then((token) => {
         if (token) {
           saveAuthToken(token);
           setToken(token);

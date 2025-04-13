@@ -1,16 +1,7 @@
 import { useState } from 'react';
 import { sendMessage as sendMessageApi } from '@/services/api';
-import { toast } from 'sonner';
-
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
-}
 
 export const useChat = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const sendMessage = async (content: string): Promise<string> => {
@@ -57,7 +48,6 @@ export const useChat = () => {
   };
 
   return {
-    messages,
     isLoading,
     sendMessage,
   };

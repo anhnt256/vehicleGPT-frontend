@@ -2,7 +2,7 @@ import { ChatBox } from '@/components/chat/ChatBox';
 import { useChat } from '@/hooks/useChat';
 
 export const ChatAssistant = () => {
-  const { messages, isLoading, sendMessage } = useChat();
+  const { isLoading, sendMessage } = useChat();
 
   return (
     <div className="h-full p-4">

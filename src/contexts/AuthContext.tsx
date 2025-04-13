@@ -4,10 +4,8 @@ import { saveAuthToken, getAuthTokenFromCookie } from '@/lib/utils/cookie';
 
 interface AuthContextType {
   token: string | null;
-  userRole: string;
   isReady: boolean;
   signOut: () => Promise<void>;
-  setUserRole: (role: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -20,7 +18,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const { getToken, signOut: clerkSignOut } = useClerkAuth();
   const { user, isLoaded: isUserLoaded } = useUser();
   const [token, setToken] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string>('free');
   const [isReady, setIsReady] = useState<boolean>(false);
 
   // Lấy token khi component mount
@@ -79,10 +76,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const value = {
     token,
-    userRole,
     isReady,
     signOut: handleSignOut,
-    setUserRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

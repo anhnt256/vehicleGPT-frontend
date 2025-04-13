@@ -1,88 +1,155 @@
-import { useOrganization, useOrganizationList } from '@clerk/clerk-react';
-import logoImg from '@/assets/logo.png';
-import { setCookie } from '@/lib/utils/cookie';
+import { Link, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import {
+  Car,
+  Settings,
+  BarChart3,
+  FileText,
+  Zap,
+  AlertTriangle,
+  Gauge,
+  Database,
+  ChevronDown,
+  ChevronRight,
+  MessageSquare,
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
+const routes = [
+  {
+    label: 'Vehicle AI Agent',
+    icon: Car,
+    color: 'text-emerald-400',
+    submenu: [
+      {
+        label: 'Chat Assistant',
+        icon: MessageSquare,
+        href: '/dashboard/chat',
+        color: 'text-emerald-400',
+      },
+      {
+        label: 'Risk Assessment',
+        icon: AlertTriangle,
+        href: '/dashboard/risk',
+        color: 'text-orange-400',
+      },
+      {
+        label: 'Performance Metrics',
+        icon: Gauge,
+        href: '/dashboard/performance',
+        color: 'text-blue-400',
+      },
+    ],
+  },
+  {
+    label: 'Data Analytics',
+    icon: BarChart3,
+    href: '/dashboard/analytics',
+    color: 'text-purple-400',
+  },
+  {
+    label: 'Claims Processing',
+    icon: FileText,
+    href: '/dashboard/claims',
+    color: 'text-cyan-400',
+  },
+  {
+    label: 'AI Insights',
+    icon: Zap,
+    href: '/dashboard/insights',
+    color: 'text-yellow-400',
+  },
+  {
+    label: 'Data Management',
+    icon: Database,
+    href: '/dashboard/data',
+    color: 'text-pink-400',
+  },
+  {
+    label: 'Settings',
+    icon: Settings,
+    href: '/dashboard/settings',
+    color: 'text-gray-400',
+  },
+];
 
 export const Sidebar = () => {
-  const { organization: activeOrganization, isLoaded: isLoadedOrg } = useOrganization();
-  const { userMemberships, isLoaded: isLoadedOrgList } = useOrganizationList({
-    userMemberships: {
-      infinite: true,
-    },
-  });
+  const location = useLocation();
+  const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
 
-  const handleOrganizationClick = (orgId: string) => {
-    // Lưu orgId vào cookie với thời hạn 30 ngày
-    setCookie('selectedOrgId', orgId, 30);
+  useEffect(() => {
+    // Mở rộng menu Vehicle AI Agent khi vào dashboard
+    setExpandedMenu('/dashboard');
+  }, []);
 
-    // Refresh trang để lấy dữ liệu mới
-    window.location.reload();
+  const toggleSubmenu = (href: string) => {
+    setExpandedMenu(expandedMenu === href ? null : href);
   };
-
-  if (!isLoadedOrg || !isLoadedOrgList || userMemberships.isLoading) {
-    return (
-      <>
-        <div className="flex items-center justify-between mb-2">
-          <Skeleton className="h-10 w-[50%]" />
-          <Skeleton className="h-10 w-10" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton />
-          <Skeleton />
-          <Skeleton />
-        </div>
-      </>
-    );
-  }
-
-  // Tạo organization mặc định với logo từ assets
-  const defaultOrg = {
-    id: 'default',
-    name: 'Default',
-    slug: 'default',
-    imageUrl: logoImg,
-  };
-
-  // Tạo array mới chứa defaultOrg và tất cả organization hiện có
-  const allOrganizations = [{ organization: defaultOrg }, ...userMemberships.data];
 
   return (
-    <div className="bg-gray-900/95 border-r border-gray-800/50 h-full p-4">
-      <h2 className="text-white text-lg font-medium mb-4">Organizations</h2>
-      <div className="space-y-3">
-        {allOrganizations.map(({ organization }) => (
-          <Button
-            key={organization.id}
-            size="sm"
-            variant="ghost"
-            className={`w-full flex items-center justify-start gap-3 py-2 px-3 ${
-              organization.id === activeOrganization?.id ||
-              (organization.id === 'default' && !activeOrganization)
-                ? 'bg-gray-800 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-            }`}
-            onClick={() => handleOrganizationClick(organization.id)}
-          >
-            {organization.imageUrl ? (
-              <div className="h-6 w-6 flex-shrink-0 rounded-md overflow-hidden">
-                <img
-                  src={organization.imageUrl}
-                  alt={`${organization.name} logo`}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="h-6 w-6 flex-shrink-0 rounded-md bg-gray-700 flex items-center justify-center">
-                <span className="text-xs font-medium text-white">
-                  {organization.name.substring(0, 1).toUpperCase()}
-                </span>
-              </div>
-            )}
-            <span className="flex-1 truncate text-sm">{organization.name}</span>
-          </Button>
-        ))}
+    <div className="w-64 space-y-4 py-4 flex flex-col h-full bg-slate-900/50 border-r border-slate-700/50">
+      <div className="px-3 py-2 flex-1">
+        <div className="space-y-1">
+          {routes.map((route) => (
+            <div key={route.href || route.label}>
+              {route.submenu ? (
+                <>
+                  <div
+                    onClick={() => toggleSubmenu(route.href || route.label)}
+                    className={cn(
+                      'text-sm group flex p-3 w-full justify-between items-center font-medium cursor-pointer hover:text-white hover:bg-slate-800/50 rounded-lg transition',
+                      expandedMenu === (route.href || route.label)
+                        ? 'text-white bg-slate-800/50'
+                        : 'text-slate-400'
+                    )}
+                  >
+                    <div className="flex items-center">
+                      <route.icon className={cn('h-5 w-5 mr-3', route.color)} />
+                      {route.label}
+                    </div>
+                    {expandedMenu === (route.href || route.label) ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </div>
+                  {expandedMenu === (route.href || route.label) && (
+                    <div className="ml-4 space-y-1">
+                      {route.submenu.map((subItem) => (
+                        <Link
+                          key={subItem.href}
+                          to={subItem.href}
+                          className={cn(
+                            'text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-slate-800/50 rounded-lg transition',
+                            location.pathname === subItem.href
+                              ? 'text-white bg-slate-800/50'
+                              : 'text-slate-400'
+                          )}
+                        >
+                          <subItem.icon className={cn('h-5 w-5 mr-3', subItem.color)} />
+                          {subItem.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Link
+                  to={route.href || '#'}
+                  className={cn(
+                    'text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-white hover:bg-slate-800/50 rounded-lg transition',
+                    location.pathname === route.href
+                      ? 'text-white bg-slate-800/50'
+                      : 'text-slate-400'
+                  )}
+                >
+                  <route.icon className={cn('h-5 w-5 mr-3', route.color)} />
+                  {route.label}
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

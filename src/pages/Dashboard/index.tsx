@@ -1,895 +1,162 @@
-import { LayoutType, Status, StatusColumn, Task } from '@/types';
-import { useEffect, useState, useRef } from 'react';
-import { useLoaderData, useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
-import KanbanColumn from './components/KanbanColumn';
-import AccordionStatus from './components/AccordionStatus';
 import {
-  DndContext,
-  DragEndEvent,
-  DragOverEvent,
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragOverlay,
-} from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { createTodo } from '@/lib/api/createTodo';
-import { allStatuses } from '@/utils/constants';
-import { TodoStatus as TodoStatusType } from '@/types';
-import { getTodos } from '@/lib/api/getTodos';
-import { updateTodo } from '@/lib/api/updateTodo';
-import { deleteTodo } from '@/lib/api/deleteTodo';
-import { useAuthToken } from '@/lib/utils/auth';
-import { getAPITokenFromStorage } from '@/lib/utils/auth';
-import { getAuthTokenFromCookie, getCookie } from '@/lib/utils/cookie';
+  Shield,
+  FileText,
+  BarChart3,
+  Zap,
+  CheckCircle2,
+  Users,
+  Clock,
+  TrendingUp,
+} from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
-const initialColumns: StatusColumn[] = [
-  {
-    id: '1',
-    title: TodoStatusType.TODO,
-    tasks: [
-      {
-        id: 'task-2',
-        title: 'Task 2',
-        isCompleted: false,
-        createdAt: new Date(),
-        status: TodoStatusType.TODO,
-        note: 'Need to start this soon.',
-      },
-      {
-        id: 'task-3',
-        title: 'Task 3',
-        isCompleted: true,
-        createdAt: new Date(),
-        status: TodoStatusType.TODO,
-      },
-    ],
-  },
-  {
-    id: '2',
-    title: TodoStatusType.IN_PROGRESS,
-    tasks: [
-      {
-        id: 'task-1',
-        title: 'Task 1',
-        isCompleted: false,
-        createdAt: new Date(),
-        status: TodoStatusType.IN_PROGRESS,
-        note: 'Working on this now, should be done by Friday.',
-      },
-    ],
-  },
-  {
-    id: '3',
-    title: TodoStatusType.BLOCKED,
-    tasks: [],
-  },
-  {
-    id: '4',
-    title: TodoStatusType.REVIEW,
-    tasks: [],
-  },
-  {
-    id: '5',
-    title: TodoStatusType.DONE,
-    tasks: [],
-  },
-  {
-    id: '6',
-    title: TodoStatusType.CANCELED,
-    tasks: [],
-  },
-];
-
-function Dashboard() {
-  useDocumentTitle('Dashboard | Super Todo is super tool with AI');
-  const { userRole } = useLoaderData();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  const [columns, setColumns] = useState<StatusColumn[]>(initialColumns);
-  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
-  const [addingTaskToColumnId, setAddingTaskToColumnId] = useState<string | null>(null);
-  const [layout, setLayout] = useState<LayoutType>(
-    (searchParams.get('view') as LayoutType) || 'list'
-  );
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
-  const [activeOptionsTaskId, setActiveOptionsTaskId] = useState<string | null>(null);
-  const [activeOptionsColumnId, setActiveOptionsColumnId] = useState<string | null>(null);
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const hasFetchedRef = useRef(false);
-  const [activeDropId, setActiveDropId] = useState<string | null>(null);
-  const [activeDropType, setActiveDropType] = useState<'before' | 'after' | 'inside' | null>(null);
-
-  // Sử dụng hook trong component
-  const { getAuthToken } = useAuthToken();
-
-  // Configure sensors for both mouse/touch
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-        delay: 50,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 50,
-        tolerance: 5,
-      },
-    })
-  );
-
-  useEffect(() => {
-    if (!window.location.search.includes('userRole')) {
-      // Lấy userRole từ cookie
-      const cookieRole = getCookie('userRole') || 'free';
-      navigate(`/dashboard?userRole=${cookieRole}`, { replace: true });
-    }
-  }, [navigate]);
-
-  // Fetch todos khi component mount
-  useEffect(() => {
-    // Sử dụng biến cờ bên ngoài useEffect để tránh gọi lại
-    if (hasFetchedRef.current) {
-      return;
-    }
-
-    const fetchTodos = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Đánh dấu ngay từ đầu để tránh multiple calls
-        hasFetchedRef.current = true;
-
-        // Lấy token trong component
-        let token = await getAuthToken();
-        if (!token) {
-          token = await getAPITokenFromStorage();
-        }
-
-        // Truyền token vào API
-        const todos = await getTodos();
-
-        // Map trực tiếp, không cần chuyển đổi tên trường
-        const mappedTodos = todos.map((todo) => ({
-          id: todo.id,
-          title: todo.title,
-          status: todo.status as Status,
-          isCompleted: todo.isCompleted,
-          createdAt: new Date(todo.createdAt),
-          note: todo.note || undefined,
-        }));
-
-        // Biến đổi dữ liệu để phù hợp với cấu trúc columns
-        const todosByStatus = mappedTodos.reduce(
-          (acc, todo) => {
-            if (!acc[todo.status]) {
-              acc[todo.status] = [];
-            }
-            acc[todo.status].push(todo);
-            return acc;
-          },
-          {} as Record<Status, Task[]>
-        );
-
-        // Cập nhật columns với dữ liệu từ API
-        const updatedColumns = initialColumns.map((column) => ({
-          ...column,
-          tasks: todosByStatus[column.title] || [],
-        }));
-
-        setColumns(updatedColumns);
-      } catch (err) {
-        console.error('Error loading todos:', err);
-        setError('Could not load data. Please try again later.');
-        // Reset flag nếu có lỗi để có thể thử lại
-        hasFetchedRef.current = false;
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTodos();
-
-    // Quan trọng: LOẠI BỎ TẤT CẢ DEPENDENCIES không cần thiết
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Chỉ chạy một lần khi mount
-
-  const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const activeData = active.data.current;
-
-    // Đóng tất cả các menu options khi bắt đầu kéo
-    setActiveOptionsTaskId(null);
-    setActiveOptionsColumnId(null);
-
-    if (activeData?.type === 'task') {
-      setDraggingTaskId(active.id as string);
-      const taskId = active.id as string;
-      const taskColumn = columns.find((col) => col.tasks.some((task) => task.id === taskId));
-      if (taskColumn) {
-        const task = taskColumn.tasks.find((t) => t.id === taskId);
-        if (task) setActiveTask(task);
-      }
-    }
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) {
-      setActiveDropId(null);
-      setActiveDropType(null);
-      return;
-    }
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    const activeData = active.data.current;
-    const overData = over.data.current;
-
-    // Chỉ xử lý kéo thả của task
-    if (activeData?.type !== 'task') return;
-
-    // Reset nếu kéo vào chính nó
-    if (activeId === overId) {
-      setActiveDropId(null);
-      setActiveDropType(null);
-      return;
-    }
-
-    // Xử lý kéo vào task
-    if (overData?.type === 'task') {
-      // Tính toán vị trí tương đối (trên/dưới)
-      const overRect = over.rect;
-      const overCenter = overRect.top + overRect.height / 2;
-
-      // Instead of event.clientY, use coordinates from the activator event
-      const clientY =
-        event.activatorEvent instanceof MouseEvent ? event.activatorEvent.clientY : overCenter;
-
-      // Use this value for positioning
-      const pointerPosition = clientY;
-
-      // Xác định vị trí dự kiến (trước hay sau task)
-      const isBeforeTask = pointerPosition < overCenter;
-
-      setActiveDropId(overId);
-      setActiveDropType(isBeforeTask ? 'before' : 'after');
-    }
-    // Xử lý kéo vào drop zone của column
-    else if (overData?.type === 'column-drop-zone') {
-      const columnId = overData.columnId;
-      setActiveDropId(columnId);
-      setActiveDropType('inside');
-    }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    // Reset các state
-    setDraggingTaskId(null);
-    setDraggingColumnId(null);
-    setActiveTask(null);
-    setActiveDropId(null);
-    setActiveDropType(null);
-
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    const activeData = active.data.current;
-    const overData = over.data.current;
-
-    // Chỉ xử lý task
-    if (activeData?.type !== 'task') return;
-
-    // Tìm task đang kéo
-    let sourceColumn: StatusColumn | undefined;
-    let sourceTask: Task | undefined;
-    let sourceColumnIndex = -1;
-
-    for (let i = 0; i < columns.length; i++) {
-      const column = columns[i];
-      const taskIndex = column.tasks.findIndex((task) => task.id === activeId);
-      if (taskIndex >= 0) {
-        sourceColumn = column;
-        sourceTask = column.tasks[taskIndex];
-        sourceColumnIndex = i;
-        break;
-      }
-    }
-
-    if (!sourceColumn || !sourceTask) return;
-
-    // Xử lý 3 trường hợp: kéo vào task khác, kéo vào column trực tiếp, hoặc kéo vào dropzone
-    if (overData?.type === 'task') {
-      // Kéo vào task khác
-      let targetColumn: StatusColumn | undefined;
-      let targetIndex = -1;
-      let targetColumnIndex = -1;
-
-      for (let i = 0; i < columns.length; i++) {
-        const column = columns[i];
-        const taskIndex = column.tasks.findIndex((task) => task.id === overId);
-        if (taskIndex >= 0) {
-          targetColumn = column;
-          targetIndex = taskIndex;
-          targetColumnIndex = i;
-          break;
-        }
-      }
-
-      if (!targetColumn) return;
-
-      // Tạo bản sao của state
-      const newColumns = [...columns];
-
-      // Xóa task khỏi column nguồn
-      newColumns[sourceColumnIndex] = {
-        ...sourceColumn,
-        tasks: sourceColumn.tasks.filter((task) => task.id !== activeId),
-      };
-
-      // Nếu là cùng một column
-      if (sourceColumnIndex === targetColumnIndex) {
-        // Chèn task vào vị trí mới trong cùng column
-        const newTasks = [...newColumns[sourceColumnIndex].tasks];
-        newTasks.splice(targetIndex, 0, sourceTask);
-
-        newColumns[sourceColumnIndex] = {
-          ...newColumns[sourceColumnIndex],
-          tasks: newTasks,
-        };
-      } else {
-        // Nếu khác column, cập nhật status của task
-        const updatedTask = {
-          ...sourceTask,
-          status: targetColumn.title,
-        };
-
-        // Chèn task vào column đích
-        const newTasks = [...targetColumn.tasks];
-        newTasks.splice(targetIndex, 0, updatedTask);
-
-        newColumns[targetColumnIndex] = {
-          ...targetColumn,
-          tasks: newTasks,
-        };
-
-        // Đồng bộ với server nếu cần
-        updateTaskOnServer(activeId, {
-          status: targetColumn.title,
-          title: sourceTask.title,
-          note: sourceTask.note,
-          isCompleted: sourceTask.isCompleted,
-        });
-      }
-
-      setColumns(newColumns);
-    } else if (overData?.type === 'column-drop-zone') {
-      // Xử lý kéo vào drop zone trong column
-      const targetColumnId = overData.columnId;
-      const targetColumn = columns.find((col) => col.id === targetColumnId);
-
-      if (!targetColumn) return;
-
-      // Tạo bản sao của state
-      const newColumns = [...columns];
-
-      // Xóa task khỏi column nguồn
-      newColumns[sourceColumnIndex] = {
-        ...sourceColumn,
-        tasks: sourceColumn.tasks.filter((task) => task.id !== activeId),
-      };
-
-      // Cập nhật status của task
-      const updatedTask = {
-        ...sourceTask,
-        status: targetColumn.title,
-      };
-
-      // Tìm index của column đích
-      const targetColumnIndex = columns.findIndex((col) => col.id === targetColumnId);
-
-      // Thêm task vào cuối column đích
-      newColumns[targetColumnIndex] = {
-        ...targetColumn,
-        tasks: [...targetColumn.tasks, updatedTask],
-      };
-
-      setColumns(newColumns);
-
-      // Đồng bộ với server
-      updateTaskOnServer(activeId, { status: targetColumn.title });
-    } else if (overData?.type === 'column') {
-      // Kéo vào column
-      const targetColumnId = overId;
-      const targetColumn = columns.find((col) => col.id === targetColumnId);
-
-      if (!targetColumn) return;
-
-      // Tạo bản sao của state
-      const newColumns = [...columns];
-
-      // Xóa task khỏi column nguồn
-      newColumns[sourceColumnIndex] = {
-        ...sourceColumn,
-        tasks: sourceColumn.tasks.filter((task) => task.id !== activeId),
-      };
-
-      // Cập nhật status của task
-      const updatedTask = {
-        ...sourceTask,
-        status: targetColumn.title,
-      };
-
-      // Tìm index của column đích
-      const targetColumnIndex = columns.findIndex((col) => col.id === targetColumnId);
-
-      // Thêm task vào cuối column đích
-      newColumns[targetColumnIndex] = {
-        ...targetColumn,
-        tasks: [...targetColumn.tasks, updatedTask],
-      };
-
-      setColumns(newColumns);
-
-      // Đồng bộ với server nếu cần
-      updateTaskOnServer(activeId, { status: targetColumn.title });
-    }
-  };
-
-  // Hàm hỗ trợ đồng bộ với server
-  const updateTaskOnServer = async (taskId: string, updatedData: Partial<Task>) => {
-    try {
-      const token = getAuthTokenFromCookie();
-      await updateTodo(taskId, token, updatedData);
-    } catch (error) {
-      console.error('Error updating task on server:', error);
-      // Có thể thêm logic rollback UI nếu cần
-    }
-  };
-
-  // Add new task
-  const handleAddTask = async (columnId: string, title: string, notes?: string) => {
-    if (!title.trim()) return;
-
-    try {
-      // Lấy token từ cookie
-      const token = getAuthTokenFromCookie();
-
-      // Xác định status dựa trên column mà người dùng đang thêm
-      const columnStatus = columns.find((col) => col.id === columnId)?.title || TodoStatusType.TODO;
-
-      // Tạo task trên server
-      const response = await createTodo(title, columnStatus, token, notes);
-
-      if (response.errors) {
-        toast.error('Error creating task: ' + response.errors.join(', '));
-        return;
-      }
-
-      // Nếu server trả về dữ liệu hợp lệ
-      if (response.data && response.data.id) {
-        // Tạo task mới với dữ liệu từ API
-        const newTask: Task = {
-          id: response.data.id,
-          title: response.data.title || title,
-          status: columnStatus, // Sử dụng status của column hiện tại
-          isCompleted: columnStatus === TodoStatusType.DONE,
-          createdAt: new Date(response.data.createdAt),
-          note: response.data.note || notes || undefined,
-        };
-
-        setColumns((prev) =>
-          prev.map((col) => {
-            if (col.id === columnId) {
-              return {
-                ...col,
-                tasks: [...col.tasks, newTask],
-              };
-            }
-            return col;
-          })
-        );
-
-        // Hiển thị toast thành công
-        setTimeout(() => {
-          toast.success('Task added successfully');
-        }, 100);
-      } else {
-        toast.error('Cannot create task: Missing data from API');
-      }
-    } catch (error) {
-      console.error('Error adding task:', error);
-      toast.error('Failed to add task. Please try again.');
-    } finally {
-      setAddingTaskToColumnId(null);
-    }
-  };
-
-  // Hàm xử lý cập nhật task
-  const handleUpdateTask = async (taskId: string, data: Partial<Task>) => {
-    try {
-      const token = getAuthTokenFromCookie();
-
-      // Tạo bản sao của data để không ảnh hưởng tới dữ liệu gốc
-      const updateData = { ...data };
-
-      // Nếu status là DONE, tự động đánh dấu completed
-      if (data.status === TodoStatusType.DONE) {
-        updateData.isCompleted = true;
-      }
-
-      // Gọi API cập nhật task với dữ liệu đã được điều chỉnh
-      const updatedTodo = await updateTodo(taskId, token, updateData);
-
-      console.log('updatedTodo', updatedTodo);
-
-      if (updatedTodo.errors) {
-        toast.error('Error updating task: ' + updatedTodo.errors.join(', '));
-        return;
-      }
-
-      toast.success('Task updated successfully');
-      // Cập nhật lại state columns với task đã được cập nhật
-      setColumns((prevColumns) => {
-        // Tìm column chứa task cần cập nhật
-        const columnWithTask = prevColumns.find((column) =>
-          column.tasks.some((task) => task.id === taskId)
-        );
-
-        if (!columnWithTask) return prevColumns;
-
-        // Tạo bản sao của task cần cập nhật
-        const taskToUpdate = { ...columnWithTask.tasks.find((task) => task.id === taskId)! };
-
-        // Cập nhật dữ liệu task
-        const updatedTask = { ...taskToUpdate, ...updateData };
-
-        // Nếu status thay đổi, di chuyển task giữa các column
-        if (updateData.status && updateData.status !== taskToUpdate.status) {
-          // Tìm column đích dựa trên status mới
-          const targetColumn = prevColumns.find((col) => col.title === updateData.status);
-
-          if (!targetColumn) return prevColumns;
-
-          return prevColumns.map((column) => {
-            // Xóa task khỏi column cũ
-            if (column.id === columnWithTask.id) {
-              return {
-                ...column,
-                tasks: column.tasks.filter((task) => task.id !== taskId),
-              };
-            }
-            // Thêm task vào column mới
-            if (column.id === targetColumn.id) {
-              return {
-                ...column,
-                tasks: [...column.tasks, updatedTask],
-              };
-            }
-            return column;
-          });
-        }
-
-        // Nếu status không thay đổi, chỉ cập nhật task
-        return prevColumns.map((column) => ({
-          ...column,
-          tasks: column.tasks.map((task) =>
-            task.id === taskId ? { ...task, ...updateData } : task
-          ),
-        }));
-      });
-
-      setEditingTaskId(null);
-    } catch (error) {
-      console.error('Error updating task:', error);
-      toast.error('Failed to update task. Please try again.');
-    }
-  };
-
-  // Hàm xử lý xóa task
-  const handleDeleteTask = async (taskId: string) => {
-    try {
-      // Lấy token từ local storage
-      const token = getAuthTokenFromCookie();
-
-      // Gọi API xóa todo
-      const success = await deleteTodo(taskId, token);
-
-      if (success) {
-        // Cập nhật UI sau khi xóa thành công
-        setColumns((prev) =>
-          prev.map((column) => ({
-            ...column,
-            tasks: column.tasks.filter((task) => task.id !== taskId),
-          }))
-        );
-        toast.success('Task deleted successfully');
-      } else {
-        console.warn('API returned unsuccessful deletion result');
-        toast.error('Failed to delete task. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      // Vẫn xóa trên UI dù API lỗi để đồng bộ trạng thái
-      setColumns((prev) =>
-        prev.map((column) => ({
-          ...column,
-          tasks: column.tasks.filter((task) => task.id !== taskId),
-        }))
-      );
-    }
-  };
-
-  // Hàm xử lý cập nhật column
-  const handleUpdateColumn = (columnId: string, newTitle: string) => {
-    if (newTitle.trim() === '') return;
-
-    setColumns((prev) =>
-      prev.map((column) =>
-        column.id === columnId ? { ...column, title: newTitle as Status } : column
-      )
-    );
-    setEditingColumnId(null);
-    toast.success('Column updated successfully');
-  };
-
-  // Hàm xử lý xóa column
-  const handleDeleteColumn = (columnId: string) => {
-    setColumns((prev) => prev.filter((column) => column.id !== columnId));
-    toast.success('Column deleted successfully');
-  };
-
-  // Hàm toggle completed status
-  const handleToggleCompleted = async (taskId: string, updatedData: Partial<Task>) => {
-    try {
-      // Tìm task hiện tại
-      let currentTask: Task | undefined;
-      for (const column of columns) {
-        const task = column.tasks.find((t) => t.id === taskId);
-        if (task) {
-          currentTask = task;
-          break;
-        }
-      }
-
-      if (!currentTask) return;
-
-      // Lấy token từ local storage
-      const token = getAuthTokenFromCookie();
-
-      // Gọi API cập nhật isCompleted, kết hợp dữ liệu từ updatedData và currentTask
-      await updateTodo(taskId, token, {
-        // Ưu tiên dữ liệu từ updatedData, nếu không có thì lấy từ currentTask
-        title: updatedData.title || currentTask.title,
-        status: updatedData.status || currentTask.status,
-        // Đảo ngược trạng thái isCompleted hiện tại
-        isCompleted: !currentTask.isCompleted,
-        note: updatedData.note || currentTask.note,
-      });
-
-      // Cập nhật UI
-      setColumns((prev) =>
-        prev.map((column) => ({
-          ...column,
-          tasks: column.tasks.map((task) =>
-            task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task
-          ),
-        }))
-      );
-      toast.success(
-        !currentTask.isCompleted ? 'Task marked as completed' : 'Task marked as incomplete'
-      );
-    } catch (error) {
-      console.error('Error toggling task completion:', error);
-      toast.error('Failed to update task status. Please try again.');
-    }
-  };
-
-  const isPaidUser = userRole === 'paid';
-
-  // Cập nhật URL khi layout thay đổi
-  useEffect(() => {
-    // Lấy các query params hiện tại
-    const params = new URLSearchParams(searchParams);
-
-    // Cập nhật param 'view'
-    params.set('view', layout);
-
-    // Cập nhật URL không làm mới trang
-    navigate(`?${params.toString()}`, { replace: true });
-  }, [layout, navigate, searchParams]);
+const Dashboard = () => {
+  useDocumentTitle('Dashboard - vehicleGPT');
 
   return (
-    <>
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto px-4 py-6">
-          {/* Header section */}
-          <div className="sticky top-0 z-10 bg-gray-900/80 backdrop-blur-sm p-2 sm:p-4 border-b border-gray-700/50 w-full">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-              <div className="flex items-center gap-3">
-                {/* Nút List luôn hiển thị cho tất cả người dùng */}
-                <button
-                  onClick={() => setLayout('list')}
-                  className={`px-5 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                    layout === 'list'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-                  }`}
-                >
-                  List
-                </button>
+    <div className="p-6 space-y-8">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Welcome to vehicleGPT</h1>
+          <p className="text-gray-400 mt-2">Your AI-powered insurance management platform</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="bg-emerald-500/10 p-3 rounded-lg">
+            <Shield className="h-6 w-6 text-emerald-400" />
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+            VehicleGPT
+          </span>
+        </div>
+      </div>
 
-                {/* Chỉ hiển thị nút Kanban cho người dùng có subscription paid */}
-                {userRole === 'paid' && (
-                  <button
-                    onClick={() => setLayout('kanban')}
-                    className={`px-5 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                      layout === 'kanban'
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-                    }`}
-                  >
-                    Kanban
-                  </button>
-                )}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Total Policies</p>
+              <h3 className="text-2xl font-bold mt-1">1,234</h3>
+            </div>
+            <div className="bg-emerald-500/10 p-3 rounded-lg">
+              <FileText className="h-6 w-6 text-emerald-400" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-emerald-400 text-sm">
+            <TrendingUp className="h-4 w-4 mr-1" />
+            <span>+12% from last month</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Active Claims</p>
+              <h3 className="text-2xl font-bold mt-1">89</h3>
+            </div>
+            <div className="bg-blue-500/10 p-3 rounded-lg">
+              <Shield className="h-6 w-6 text-blue-400" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-blue-400 text-sm">
+            <Clock className="h-4 w-4 mr-1" />
+            <span>Avg. processing time: 2.3 days</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">Customers</p>
+              <h3 className="text-2xl font-bold mt-1">5,678</h3>
+            </div>
+            <div className="bg-purple-500/10 p-3 rounded-lg">
+              <Users className="h-6 w-6 text-purple-400" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-purple-400 text-sm">
+            <TrendingUp className="h-4 w-4 mr-1" />
+            <span>+8% from last quarter</span>
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-400 text-sm">AI Accuracy</p>
+              <h3 className="text-2xl font-bold mt-1">98.5%</h3>
+            </div>
+            <div className="bg-cyan-500/10 p-3 rounded-lg">
+              <Zap className="h-6 w-6 text-cyan-400" />
+            </div>
+          </div>
+          <div className="mt-4 flex items-center text-cyan-400 text-sm">
+            <CheckCircle2 className="h-4 w-4 mr-1" />
+            <span>Industry leading performance</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+          <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <button className="flex items-center space-x-2 p-4 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors">
+              <FileText className="h-5 w-5 text-emerald-400" />
+              <span>New Policy</span>
+            </button>
+            <button className="flex items-center space-x-2 p-4 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors">
+              <Shield className="h-5 w-5 text-blue-400" />
+              <span>Process Claim</span>
+            </button>
+            <button className="flex items-center space-x-2 p-4 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 transition-colors">
+              <Users className="h-5 w-5 text-purple-400" />
+              <span>Add Customer</span>
+            </button>
+            <button className="flex items-center space-x-2 p-4 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 transition-colors">
+              <BarChart3 className="h-5 w-5 text-cyan-400" />
+              <span>View Reports</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+          <h3 className="text-xl font-semibold mb-4">Recent Activity</h3>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="bg-emerald-500/10 p-2 rounded-lg">
+                <FileText className="h-5 w-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="font-medium">New policy created</p>
+                <p className="text-sm text-gray-400">2 minutes ago</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-blue-500/10 p-2 rounded-lg">
+                <Shield className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="font-medium">Claim processed</p>
+                <p className="text-sm text-gray-400">15 minutes ago</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-purple-500/10 p-2 rounded-lg">
+                <Users className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="font-medium">New customer added</p>
+                <p className="text-sm text-gray-400">1 hour ago</p>
               </div>
             </div>
           </div>
-
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-4 mb-4 rounded-md">
-              {error}
-            </div>
-          )}
-
-          {isLoading ? (
-            <div className="flex items-center justify-center h-[50vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
-            </div>
-          ) : (
-            <div className="flex-1 w-full">
-              <DndContext
-                sensors={sensors}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-              >
-                {layout === 'kanban' && userRole === 'paid' ? (
-                  <div className="flex gap-2 overflow-x-auto pb-4 min-h-[calc(100vh-120px)] p-2 sm:p-4">
-                    <SortableContext
-                      items={columns.map((col) => col.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {columns.map((column) => (
-                        <KanbanColumn
-                          key={column.id}
-                          column={column}
-                          isPaidUser={isPaidUser}
-                          addingTaskToColumnId={addingTaskToColumnId}
-                          setAddingTaskToColumnId={setAddingTaskToColumnId}
-                          handleAddTask={handleAddTask}
-                          handleUpdateColumn={handleUpdateColumn}
-                          handleDeleteColumn={handleDeleteColumn}
-                          editingColumnId={editingColumnId}
-                          setEditingColumnId={setEditingColumnId}
-                          editingTaskId={editingTaskId}
-                          setEditingTaskId={setEditingTaskId}
-                          handleUpdateTask={handleUpdateTask}
-                          handleDeleteTask={handleDeleteTask}
-                          handleToggleCompleted={handleToggleCompleted}
-                          activeOptionsTaskId={activeOptionsTaskId}
-                          setActiveOptionsTaskId={setActiveOptionsTaskId}
-                          activeOptionsColumnId={activeOptionsColumnId}
-                          setActiveOptionsColumnId={setActiveOptionsColumnId}
-                          draggingTaskId={draggingTaskId}
-                          statusOptions={allStatuses}
-                          activeDropId={activeDropId}
-                          activeDropType={activeDropType}
-                        />
-                      ))}
-                    </SortableContext>
-                  </div>
-                ) : (
-                  <div className="w-full p-2 sm:p-4">
-                    {columns.map((column) => (
-                      <AccordionStatus
-                        key={column.id}
-                        column={column}
-                        isPaidUser={isPaidUser}
-                        addingTaskToColumnId={addingTaskToColumnId}
-                        setAddingTaskToColumnId={setAddingTaskToColumnId}
-                        handleAddTask={handleAddTask}
-                        editingTaskId={editingTaskId}
-                        setEditingTaskId={setEditingTaskId}
-                        handleUpdateTask={handleUpdateTask}
-                        handleDeleteTask={handleDeleteTask}
-                        handleToggleCompleted={handleToggleCompleted}
-                        handleUpdateColumn={handleUpdateColumn}
-                        handleDeleteColumn={handleDeleteColumn}
-                        activeOptionsTaskId={activeOptionsTaskId}
-                        setActiveOptionsTaskId={setActiveOptionsTaskId}
-                        activeOptionsColumnId={activeOptionsColumnId}
-                        setActiveOptionsColumnId={setActiveOptionsColumnId}
-                        statusOptions={allStatuses}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Thêm DragOverlay để hiển thị task đang kéo */}
-                <DragOverlay>
-                  {activeTask && (
-                    <div
-                      className="bg-gray-800/90 border border-gray-700 rounded-md p-3 shadow-xl min-w-[250px] max-w-[350px]"
-                      style={{ transform: 'rotate(2deg)' }}
-                    >
-                      <div className="flex items-center gap-2">
-                        {activeTask.isCompleted ? (
-                          <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polyline points="20 6 9 17 4 12"></polyline>
-                            </svg>
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-full border-2 border-gray-400"></div>
-                        )}
-                        <span className="text-white font-medium">{activeTask.title}</span>
-                      </div>
-                      {activeTask.note && (
-                        <div className="mt-2 text-sm text-gray-300 line-clamp-2">
-                          {activeTask.note}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {draggingColumnId && !activeTask && (
-                    <div
-                      className="flex-shrink-0 w-[320px] flex flex-col bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl opacity-95"
-                      style={{ transform: 'rotate(1deg)' }}
-                    >
-                      <div className="p-3 bg-gray-700 flex items-center">
-                        <span className="text-white font-medium ml-2">
-                          {columns.find((col) => col.id === draggingColumnId)?.title}
-                        </span>
-                      </div>
-                      <div className="p-3 bg-gray-800 h-[100px] flex items-center justify-center">
-                        <span className="text-gray-400 text-sm">Column Content</span>
-                      </div>
-                    </div>
-                  )}
-                </DragOverlay>
-              </DndContext>
-            </div>
-          )}
         </div>
       </div>
-    </>
+    </div>
   );
-}
+};
 
 export default Dashboard;

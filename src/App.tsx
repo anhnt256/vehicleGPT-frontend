@@ -1,8 +1,8 @@
 import { ClerkProvider } from '@clerk/clerk-react';
-import { AppRoutes } from './routes';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { AuthWrapper } from '@/components/AuthWrapper';
+import { AppRoutes } from './routes';
 
 if (!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) {
   throw new Error('Missing Publishable Key');
